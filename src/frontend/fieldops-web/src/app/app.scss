@@ -1,0 +1,81 @@
+﻿:host {
+  display: block;
+  min-height: 100vh;
+  background: #f4f7fb;
+  color: #17253d;
+  font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 24px 7%;
+  background: white;
+  border-bottom: 1px solid #e5eaf1;
+}
+
+.brand {
+  font-size: 24px;
+  font-weight: 750;
+
+  span {
+    color: #2563eb;
+  }
+}
+
+.version {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.hero {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 110px 24px;
+  text-align: center;
+
+  h1 {
+    font-size: clamp(48px, 8vw, 76px);
+    margin: 16px 0;
+    letter-spacing: -2px;
+  }
+}
+
+.eyebrow {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.description {
+  color: #64748b;
+  font-size: 19px;
+  line-height: 1.7;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 30px;
+  padding: 12px 20px;
+  background: #eaf8ef;
+  color: #166534;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  background: #22c55e;
+  border-radius: 50%;
+}
