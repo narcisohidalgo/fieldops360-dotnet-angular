@@ -79,3 +79,37 @@
   background: #22c55e;
   border-radius: 50%;
 }
+
+.api-panel {
+  margin: 35px auto 0;
+  padding: 25px;
+  max-width: 520px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+  text-align: left;
+
+  h2 {
+    margin: 0 0 20px;
+    font-size: 20px;
+  }
+
+  p {
+    font-size: 14px;
+    line-height: 1.8;
+  }
+}
+
+.api-details {
+  color: #475569;
+
+  strong {
+    color: #17253d;
+  }
+}
+
+.api-error {
+  color: #dc2626;
+  font-weight: 600;
+}
