@@ -1,0 +1,29 @@
+﻿# .NET
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Angular / Node.js
+**/node_modules/
+**/dist/
+**/.angular/
+**/coverage/
+
+# Testing
+**/TestResults/
+**/playwright-report/
+**/test-results/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+**/appsettings.Local.json
+*.pfx
+*.p12
+
+# Operating system
+.DS_Store
+Thumbs.db
