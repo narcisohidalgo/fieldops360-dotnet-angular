@@ -1,4 +1,6 @@
-﻿using FieldOps.Infrastructure.Persistence;
+﻿using FieldOps.Application.Abstractions.Persistence;
+using FieldOps.Infrastructure.Persistence;
+using FieldOps.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,8 @@ public static class DependencyInjection
 
         services.AddDbContext<FieldOpsDbContext>(options =>
             options.UseSqlServer(connectionString));
+
+        services.AddScoped<IFacilityRepository, FacilityRepository>();
 
         return services;
     }

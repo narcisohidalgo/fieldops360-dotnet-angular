@@ -1,4 +1,5 @@
-﻿using FieldOps.Infrastructure;
+using FieldOps.Application.Facilities;
+using FieldOps.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +9,8 @@ builder.Services.AddOpenApi();
 
 // Register Infrastructure and Entity Framework Core.
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddScoped<IFacilityService, FacilityService>();
 
 var app = builder.Build();
 
