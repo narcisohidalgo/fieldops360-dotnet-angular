@@ -1,4 +1,4 @@
-﻿using FieldOps.Application.Abstractions.Persistence;
+using FieldOps.Application.Abstractions.Persistence;
 using FieldOps.Domain.Entities;
 
 namespace FieldOps.Application.Facilities;
@@ -72,6 +72,24 @@ public sealed class FacilityService : IFacilityService
 
         return true;
     }
+
+    public async Task<bool> ActivateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var facility = await _repository.GetByIdAsync(
+            id, cancellationToken);
+
+        if (facility is null)
+            return false;
+
+        facility.Activate();
+
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
 
     public async Task<bool> DeactivateAsync(
         Guid id,

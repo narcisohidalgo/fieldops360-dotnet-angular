@@ -130,6 +130,35 @@ describe('FacilityService', () => {
 
     expect(completed).toBe(true);
   });
+  it('should activate a facility using PATCH', () => {
+    // Arrange
+    const facilityId = '00000000-0000-0000-0000-000000000001';
+
+    let completed = false;
+
+    // Act
+    service.activate(facilityId).subscribe({
+      next: () => {
+        completed = true;
+      }
+    });
+
+    // Assert: comprobar la peticion HTTP.
+    const request = httpMock.expectOne(
+      `/api/facilities/${facilityId}/activate`
+    );
+
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({});
+
+    // Simular la respuesta 204 de ASP.NET Core.
+    request.flush(null, {
+      status: 204,
+      statusText: 'No Content'
+    });
+
+    expect(completed).toBe(true);
+  });
   it('should deactivate a facility using PATCH', () => {
     // Arrange
     const facilityId = '00000000-0000-0000-0000-000000000001';

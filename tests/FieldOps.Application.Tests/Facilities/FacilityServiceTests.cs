@@ -222,6 +222,64 @@ public sealed class FacilityServiceTests
         Assert.Empty(repository.Facilities);
         Assert.Equal(0, repository.SaveChangesCallCount);
     }
+    [Fact]
+    public async Task ActivateAsync_WithInactiveFacility_SetsIsActiveToTrue()
+    {
+        // Arrange
+        var repository = new InMemoryFacilityRepository();
+        var service = new FacilityService(repository);
+
+        var created = await service.CreateAsync(
+            new CreateFacilityCommand(
+                "FAC-TEST-005",
+                "Centro de operaciones",
+                "Sevilla",
+                "Avenida Industria 25"));
+
+        var deactivated = await service.DeactivateAsync(created.Id);
+
+        Assert.True(deactivated);
+
+        // Act
+        var activated = await service.ActivateAsync(created.Id);
+
+        // Assert
+        Assert.True(activated);
+
+        var facility = await service.GetByIdAsync(created.Id);
+
+        Assert.NotNull(facility);
+        Assert.True(facility.IsActive);
+
+        Assert.Equal(created.Id, facility.Id);
+        Assert.Equal("FAC-TEST-005", facility.Code);
+        Assert.Equal("Centro de operaciones", facility.Name);
+        Assert.Equal("Sevilla", facility.City);
+        Assert.Equal("Avenida Industria 25", facility.Address);
+
+        Assert.Single(repository.Facilities);
+        Assert.Equal(3, repository.SaveChangesCallCount);
+    }
+
+    [Fact]
+    public async Task ActivateAsync_WithNonExistingFacility_ReturnsFalse()
+    {
+        // Arrange
+        var repository = new InMemoryFacilityRepository();
+        var service = new FacilityService(repository);
+
+        var nonExistingId = Guid.NewGuid();
+
+        // Act
+        var activated = await service.ActivateAsync(nonExistingId);
+
+        // Assert
+        Assert.False(activated);
+        Assert.Empty(repository.Facilities);
+        Assert.Equal(0, repository.SaveChangesCallCount);
+    }
+
+
     private sealed class InMemoryFacilityRepository : IFacilityRepository
     {
         private readonly List<Facility> _facilities = new();

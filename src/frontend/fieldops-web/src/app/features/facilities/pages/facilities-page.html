@@ -1,4 +1,4 @@
-﻿<section class="facilities-page">
+<section class="facilities-page">
   <header class="page-header">
     <div>
       <h1>Gestión de instalaciones</h1>
@@ -10,7 +10,7 @@
       class="create-button"
       [attr.aria-expanded]="showCreateForm()"
       aria-controls="facility-create-panel"
-      [disabled]="isDeactivating()"
+      [disabled]="isDeactivating() || isActivating()"
       (click)="toggleCreateForm()"
     >
       {{ showCreateForm() ? 'Cancelar' : '+ Nueva instalación' }}
@@ -63,7 +63,7 @@
         <button
           type="button"
           class="cancel-action"
-          [disabled]="isDeactivating()"
+          [disabled]="isDeactivating() || isActivating()"
           (click)="cancelDeactivation()"
         >
           Cancelar
@@ -72,10 +72,56 @@
         <button
           type="button"
           class="confirm-deactivation"
-          [disabled]="isDeactivating()"
+          [disabled]="isDeactivating() || isActivating()"
           (click)="confirmDeactivation()"
         >
           {{ isDeactivating() ? 'Desactivando...' : 'Confirmar desactivación' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (facilityToActivate(); as facility) {
+    <section
+      class="activation-panel"
+      role="group"
+      aria-labelledby="activation-title"
+    >
+      <h2 id="activation-title">Confirmar activación</h2>
+
+      <p>
+        ¿Quieres activar la instalación
+        <strong>{{ facility.code }} — {{ facility.name }}</strong>?
+      </p>
+
+      <p class="activation-note">
+        La instalación volverá a estar disponible como Activa.
+        Sus datos actuales se conservarán.
+      </p>
+
+      @if (activationError(); as error) {
+        <p class="activation-error" role="alert">
+          {{ error }}
+        </p>
+      }
+
+      <div class="activation-actions">
+        <button
+          type="button"
+          class="cancel-activation"
+          [disabled]="isActivating()"
+          (click)="cancelActivation()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          class="confirm-activation"
+          [disabled]="isActivating()"
+          (click)="confirmActivation()"
+        >
+          {{ isActivating() ? 'Activando...' : 'Confirmar activación' }}
         </button>
       </div>
     </section>
@@ -135,7 +181,7 @@
                   <button
                     type="button"
                     class="edit-button"
-                    [disabled]="isDeactivating()"
+                    [disabled]="isDeactivating() || isActivating()"
                     [attr.aria-label]="'Editar instalación ' + facility.code"
                     (click)="editFacility(facility)"
                   >
@@ -146,11 +192,21 @@
                     <button
                       type="button"
                       class="deactivate-button"
-                      [disabled]="isDeactivating()"
+                      [disabled]="isDeactivating() || isActivating()"
                       [attr.aria-label]="'Desactivar instalación ' + facility.code"
                       (click)="requestDeactivation(facility)"
                     >
                       Desactivar
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="activate-button"
+                      [disabled]="isDeactivating() || isActivating()"
+                      [attr.aria-label]="'Activar instalación ' + facility.code"
+                      (click)="requestActivation(facility)"
+                    >
+                      Activar
                     </button>
                   }
                 </div>

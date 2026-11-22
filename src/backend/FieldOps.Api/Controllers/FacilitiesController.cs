@@ -1,4 +1,4 @@
-﻿using FieldOps.Application.Facilities;
+using FieldOps.Application.Facilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FieldOps.Api.Controllers;
@@ -97,6 +97,23 @@ public sealed class FacilitiesController : ControllerBase
                 detail: ex.Message);
         }
     }
+
+    [HttpPatch("{id:guid}/activate")]
+    public async Task<IActionResult> Activate(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var activated = await _facilityService.ActivateAsync(
+            id, cancellationToken);
+
+        if (!activated)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
 
     [HttpPatch("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(

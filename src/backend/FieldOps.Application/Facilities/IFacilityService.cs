@@ -1,4 +1,4 @@
-﻿namespace FieldOps.Application.Facilities;
+namespace FieldOps.Application.Facilities;
 
 public interface IFacilityService
 {
@@ -17,6 +17,11 @@ public interface IFacilityService
         Guid id,
         UpdateFacilityCommand command,
         CancellationToken cancellationToken = default);
+
+    Task<bool> ActivateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
 
     Task<bool> DeactivateAsync(
         Guid id,

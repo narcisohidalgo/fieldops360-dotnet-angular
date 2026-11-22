@@ -1,4 +1,4 @@
-﻿namespace FieldOps.Domain.Entities;
+namespace FieldOps.Domain.Entities;
 
 public sealed class Facility
 {
@@ -40,6 +40,12 @@ public sealed class Facility
             ? null
             : validatedAddress;
     }
+
+    public void Activate()
+    {
+        IsActive = true;
+    }
+
 
     public void Deactivate()
     {

@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -26,6 +26,10 @@ export class FacilitiesPage implements OnInit {
   protected readonly isDeactivating = signal(false);
   protected readonly deactivationError = signal<string | null>(null);
 
+  protected readonly facilityToActivate = signal<Facility | null>(null);
+  protected readonly isActivating = signal(false);
+  protected readonly activationError = signal<string | null>(null);
+
   private readonly facilityService = inject(FacilityService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -34,7 +38,7 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected toggleCreateForm(): void {
-    if (this.isDeactivating()) {
+    if (this.isDeactivating() || this.isActivating()) {
       return;
     }
 
@@ -43,6 +47,7 @@ export class FacilitiesPage implements OnInit {
     this.showCreateForm.set(willOpen);
 
     if (willOpen) {
+      this.facilityToActivate.set(null);
       this.selectedFacility.set(null);
       this.facilityToDeactivate.set(null);
     }
@@ -62,7 +67,7 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected editFacility(facility: Facility): void {
-    if (this.isDeactivating()) {
+    if (this.isDeactivating() || this.isActivating()) {
       return;
     }
 
@@ -70,6 +75,8 @@ export class FacilitiesPage implements OnInit {
     this.facilityToDeactivate.set(null);
     this.deactivationError.set(null);
 
+    this.facilityToActivate.set(null);
+    this.activationError.set(null);
     this.selectedFacility.set(facility);
     this.successMessage.set(null);
   }
@@ -93,7 +100,7 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected requestDeactivation(facility: Facility): void {
-    if (this.isDeactivating() || !facility.isActive) {
+    if (this.isDeactivating() || this.isActivating() || !facility.isActive) {
       return;
     }
 
@@ -102,11 +109,12 @@ export class FacilitiesPage implements OnInit {
     this.successMessage.set(null);
 
     this.deactivationError.set(null);
+    this.facilityToActivate.set(null);
     this.facilityToDeactivate.set(facility);
   }
 
   protected cancelDeactivation(): void {
-    if (this.isDeactivating()) {
+    if (this.isDeactivating() || this.isActivating()) {
       return;
     }
 
@@ -117,7 +125,7 @@ export class FacilitiesPage implements OnInit {
   protected confirmDeactivation(): void {
     const facility = this.facilityToDeactivate();
 
-    if (!facility || this.isDeactivating()) {
+    if (!facility || this.isDeactivating() || this.isActivating()) {
       return;
     }
 
@@ -161,6 +169,83 @@ export class FacilitiesPage implements OnInit {
             }
           } else {
             this.deactivationError.set(
+              'Se produjo un error inesperado.'
+            );
+          }
+        }
+      });
+  }
+
+  protected requestActivation(facility: Facility): void {
+    if (this.isActivating() || this.isDeactivating() || facility.isActive) {
+      return;
+    }
+
+    this.showCreateForm.set(false);
+    this.selectedFacility.set(null);
+    this.facilityToDeactivate.set(null);
+    this.deactivationError.set(null);
+    this.successMessage.set(null);
+    this.activationError.set(null);
+    this.facilityToActivate.set(facility);
+  }
+
+  protected cancelActivation(): void {
+    if (this.isActivating()) {
+      return;
+    }
+
+    this.facilityToActivate.set(null);
+    this.activationError.set(null);
+  }
+
+  protected confirmActivation(): void {
+    const facility = this.facilityToActivate();
+
+    if (!facility || this.isActivating() || this.isDeactivating()) {
+      return;
+    }
+
+    this.isActivating.set(true);
+    this.activationError.set(null);
+
+    this.facilityService.activate(facility.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isActivating.set(false);
+          this.facilityToActivate.set(null);
+
+          this.successMessage.set(
+            `Instalación ${facility.code} activada correctamente.`
+          );
+
+          this.loadFacilities();
+        },
+        error: (error: unknown) => {
+          this.isActivating.set(false);
+
+          if (error instanceof HttpErrorResponse) {
+            switch (error.status) {
+              case 404:
+                this.activationError.set(
+                  'La instalación ya no existe. Actualiza el listado.'
+                );
+                break;
+
+              case 0:
+                this.activationError.set(
+                  'No se pudo conectar con el servidor.'
+                );
+                break;
+
+              default:
+                this.activationError.set(
+                  'Se produjo un error al activar la instalación.'
+                );
+            }
+          } else {
+            this.activationError.set(
               'Se produjo un error inesperado.'
             );
           }

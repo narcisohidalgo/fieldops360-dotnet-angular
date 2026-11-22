@@ -1,4 +1,4 @@
-﻿import { inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
@@ -40,6 +40,12 @@ export class FacilityService {
     );
   }
 
+  activate(id: string): Observable<void> {
+    return this.http.patch<void>(
+      `${this.apiUrl}/${encodeURIComponent(id)}/activate`,
+      {}
+    );
+  }
   deactivate(id: string): Observable<void> {
     return this.http.patch<void>(
       `${this.apiUrl}/${encodeURIComponent(id)}/deactivate`,
