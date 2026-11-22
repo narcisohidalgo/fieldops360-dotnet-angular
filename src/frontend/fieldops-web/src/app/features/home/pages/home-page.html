@@ -1,0 +1,34 @@
+<section class="hero">
+    <p class="eyebrow">ENTERPRISE OPERATIONS PLATFORM</p>
+
+    <h1>{{ title() }}</h1>
+
+    <p class="description">
+      Plataforma empresarial para la gestión de instalaciones,
+      activos, incidencias y órdenes de trabajo.
+    </p>
+
+    <div class="status">
+      <span class="status-dot"></span>
+      Frontend Angular operativo
+    </div>
+
+    <section class="api-panel">
+      <h2>Estado del backend</h2>
+
+      @if (isLoading()) {
+        <p role="status">Conectando con la API .NET...</p>
+      } @else if (errorMessage()) {
+        <p class="api-error" role="alert">
+          {{ errorMessage() }}
+        </p>
+      } @else if (apiStatus(); as api) {
+        <div class="api-details">
+          <p><strong>Aplicación:</strong> {{ api.application }}</p>
+          <p><strong>Estado:</strong> {{ api.status }}</p>
+          <p><strong>Framework:</strong> {{ api.framework }}</p>
+          <p><strong>Fecha UTC:</strong> {{ api.timestampUtc }}</p>
+        </div>
+      }
+    </section>
+  </section>

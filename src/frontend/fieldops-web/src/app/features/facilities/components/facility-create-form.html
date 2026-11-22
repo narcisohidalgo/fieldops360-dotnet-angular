@@ -1,0 +1,85 @@
+<section class="facility-form">
+  <h2>Nueva instalación</h2>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+    <div class="form-field">
+      <label for="facility-code">Código *</label>
+
+      <input
+        id="facility-code"
+        type="text"
+        formControlName="code"
+        maxlength="30"
+        autocomplete="off"
+      />
+
+      @if (form.controls.code.touched && form.controls.code.invalid) {
+        <small class="field-error">
+          Introduce un código válido de hasta 30 caracteres.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="facility-name">Nombre *</label>
+
+      <input
+        id="facility-name"
+        type="text"
+        formControlName="name"
+        maxlength="150"
+      />
+
+      @if (form.controls.name.touched && form.controls.name.invalid) {
+        <small class="field-error">
+          Introduce un nombre válido de hasta 150 caracteres.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="facility-city">Ciudad *</label>
+
+      <input
+        id="facility-city"
+        type="text"
+        formControlName="city"
+        maxlength="100"
+      />
+
+      @if (form.controls.city.touched && form.controls.city.invalid) {
+        <small class="field-error">
+          Introduce una ciudad válida de hasta 100 caracteres.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="facility-address">Dirección</label>
+
+      <input
+        id="facility-address"
+        type="text"
+        formControlName="address"
+        maxlength="250"
+      />
+
+      @if (form.controls.address.touched && form.controls.address.invalid) {
+        <small class="field-error">
+          La dirección no puede superar los 250 caracteres.
+        </small>
+      }
+    </div>
+
+    @if (saveError()) {
+      <p class="save-error" role="alert">
+        {{ saveError() }}
+      </p>
+    }
+
+    <button type="submit" [disabled]="isSaving()">
+      {{ isSaving() ? 'Guardando...' : 'Crear instalación' }}
+    </button>
+  </form>
+</section>

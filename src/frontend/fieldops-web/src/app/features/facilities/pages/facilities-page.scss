@@ -1,0 +1,224 @@
+﻿.facilities-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+
+  h1 {
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #64748b;
+  }
+}
+
+.message {
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: #f1f5f9;
+}
+
+.error {
+  color: #991b1b;
+  background: #fef2f2;
+
+  button {
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+  }
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.inactive {
+  color: #991b1b;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.create-button {
+  padding: 0.85rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #1d4ed8;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 2px;
+  }
+}
+
+.create-panel {
+  max-width: 680px;
+  margin-bottom: 2rem;
+}
+
+.success-message {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 500;
+}
+
+.edit-panel {
+  max-width: 680px;
+  margin-bottom: 2rem;
+}
+
+.edit-button {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #dbeafe;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 2px;
+  }
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.deactivate-button {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #fee2e2;
+  }
+}
+
+.deactivation-panel {
+  max-width: 680px;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #17253d;
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1.25rem;
+  }
+
+  p {
+    line-height: 1.6;
+  }
+}
+
+.deactivation-note {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.deactivation-error {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.deactivation-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+
+  button {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.cancel-action {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.confirm-deactivation {
+  border: none;
+  background: #dc2626;
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+}
+
+.deactivate-button:focus-visible,
+.deactivation-actions button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}

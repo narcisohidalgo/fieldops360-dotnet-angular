@@ -1,0 +1,164 @@
+﻿<section class="facilities-page">
+  <header class="page-header">
+    <div>
+      <h1>Gestión de instalaciones</h1>
+      <p>Consulta y administra las instalaciones de FieldOps 360.</p>
+    </div>
+
+    <button
+      type="button"
+      class="create-button"
+      [attr.aria-expanded]="showCreateForm()"
+      aria-controls="facility-create-panel"
+      [disabled]="isDeactivating()"
+      (click)="toggleCreateForm()"
+    >
+      {{ showCreateForm() ? 'Cancelar' : '+ Nueva instalación' }}
+    </button>
+  </header>
+
+  @if (showCreateForm()) {
+    <div id="facility-create-panel" class="create-panel">
+      <app-facility-create-form
+        (created)="onFacilityCreated($event)"
+      />
+    </div>
+  }
+
+  @if (selectedFacility(); as facility) {
+    <div class="edit-panel">
+      <app-facility-edit-form
+        [facility]="facility"
+        (saved)="onFacilityUpdated()"
+        (cancelled)="cancelEdit()"
+      />
+    </div>
+  }
+
+  @if (facilityToDeactivate(); as facility) {
+    <section
+      class="deactivation-panel"
+      role="group"
+      aria-labelledby="deactivation-title"
+    >
+      <h2 id="deactivation-title">Confirmar desactivación</h2>
+
+      <p>
+        ¿Quieres desactivar la instalación
+        <strong>{{ facility.code }} — {{ facility.name }}</strong>?
+      </p>
+
+      <p class="deactivation-note">
+        La instalación no se eliminará de la base de datos.
+        Permanecerá registrada con estado Inactiva.
+      </p>
+
+      @if (deactivationError(); as error) {
+        <p class="deactivation-error" role="alert">
+          {{ error }}
+        </p>
+      }
+
+      <div class="deactivation-actions">
+        <button
+          type="button"
+          class="cancel-action"
+          [disabled]="isDeactivating()"
+          (click)="cancelDeactivation()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          class="confirm-deactivation"
+          [disabled]="isDeactivating()"
+          (click)="confirmDeactivation()"
+        >
+          {{ isDeactivating() ? 'Desactivando...' : 'Confirmar desactivación' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (successMessage()) {
+    <p class="success-message" role="status">
+      {{ successMessage() }}
+    </p>
+  }
+
+  @if (isLoading()) {
+    <p class="message" role="status">
+      Cargando instalaciones...
+    </p>
+  } @else if (errorMessage()) {
+    <div class="message error" role="alert">
+      <p>{{ errorMessage() }}</p>
+      <button type="button" (click)="loadFacilities()">
+        Reintentar
+      </button>
+    </div>
+  } @else if (facilities().length === 0) {
+    <p class="message">
+      Todavía no hay instalaciones registradas.
+    </p>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Código</th>
+            <th scope="col">Nombre</th>
+            <th scope="col">Ciudad</th>
+            <th scope="col">Dirección</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (facility of facilities(); track facility.id) {
+            <tr>
+              <td>{{ facility.code }}</td>
+              <td>{{ facility.name }}</td>
+              <td>{{ facility.city }}</td>
+              <td>{{ facility.address ?? 'Sin dirección' }}</td>
+
+              <td>
+                <span [class.inactive]="!facility.isActive">
+                  {{ facility.isActive ? 'Activa' : 'Inactiva' }}
+                </span>
+              </td>
+
+              <td>
+                <div class="row-actions">
+                  <button
+                    type="button"
+                    class="edit-button"
+                    [disabled]="isDeactivating()"
+                    [attr.aria-label]="'Editar instalación ' + facility.code"
+                    (click)="editFacility(facility)"
+                  >
+                    Editar
+                  </button>
+
+                  @if (facility.isActive) {
+                    <button
+                      type="button"
+                      class="deactivate-button"
+                      [disabled]="isDeactivating()"
+                      [attr.aria-label]="'Desactivar instalación ' + facility.code"
+                      (click)="requestDeactivation(facility)"
+                    >
+                      Desactivar
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

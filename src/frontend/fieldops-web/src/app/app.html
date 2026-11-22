@@ -1,43 +1,30 @@
 ﻿<div class="page">
   <header class="topbar">
-    <div class="brand">FieldOps <span>360</span></div>
+    <div class="brand">
+      FieldOps <span>360</span>
+    </div>
+
+    <nav class="primary-nav" aria-label="Navegación principal">
+      <a
+        routerLink="/"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Inicio
+      </a>
+
+      <a
+        routerLink="/facilities"
+        routerLinkActive="active"
+      >
+        Instalaciones
+      </a>
+    </nav>
+
     <span class="version">Angular 22 · ASP.NET Core 10</span>
   </header>
 
-  <main class="hero">
-    <p class="eyebrow">ENTERPRISE OPERATIONS PLATFORM</p>
-
-    <h1>{{ title() }}</h1>
-
-    <p class="description">
-      Plataforma empresarial para la gestión de instalaciones,
-      activos, incidencias y órdenes de trabajo.
-    </p>
-
-    <div class="status">
-      <span class="status-dot"></span>
-      Frontend Angular operativo
-    </div>
-
-    <section class="api-panel">
-      <h2>Estado del backend</h2>
-
-      @if (isLoading()) {
-        <p role="status">Conectando con la API .NET...</p>
-      } @else if (errorMessage()) {
-        <p class="api-error" role="alert">
-          {{ errorMessage() }}
-        </p>
-      } @else if (apiStatus(); as api) {
-        <div class="api-details">
-          <p><strong>Aplicación:</strong> {{ api.application }}</p>
-          <p><strong>Estado:</strong> {{ api.status }}</p>
-          <p><strong>Framework:</strong> {{ api.framework }}</p>
-          <p><strong>Fecha UTC:</strong> {{ api.timestampUtc }}</p>
-        </div>
-      }
-    </section>
+  <main class="route-content">
+    <router-outlet />
   </main>
 </div>
-
-<router-outlet />

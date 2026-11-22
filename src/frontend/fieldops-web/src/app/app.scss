@@ -14,8 +14,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 24px 7%;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 20px 7%;
   background: white;
   border-bottom: 1px solid #e5eaf1;
 }
@@ -23,9 +24,37 @@
 .brand {
   font-size: 24px;
   font-weight: 750;
+  white-space: nowrap;
 
   span {
     color: #2563eb;
+  }
+}
+
+.primary-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  a {
+    padding: 10px 16px;
+    color: #475569;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover {
+      background: #f1f5f9;
+      color: #1d4ed8;
+    }
+
+    &.active {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
   }
 }
 
@@ -34,82 +63,17 @@
   font-size: 13px;
 }
 
-.hero {
-  max-width: 850px;
-  margin: 0 auto;
-  padding: 110px 24px;
-  text-align: center;
-
-  h1 {
-    font-size: clamp(48px, 8vw, 76px);
-    margin: 16px 0;
-    letter-spacing: -2px;
-  }
+.route-content {
+  width: 100%;
 }
 
-.eyebrow {
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 2px;
-}
-
-.description {
-  color: #64748b;
-  font-size: 19px;
-  line-height: 1.7;
-}
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 30px;
-  padding: 12px 20px;
-  background: #eaf8ef;
-  color: #166534;
-  border-radius: 30px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.status-dot {
-  width: 9px;
-  height: 9px;
-  background: #22c55e;
-  border-radius: 50%;
-}
-
-.api-panel {
-  margin: 35px auto 0;
-  padding: 25px;
-  max-width: 520px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
-  text-align: left;
-
-  h2 {
-    margin: 0 0 20px;
-    font-size: 20px;
+@media (max-width: 768px) {
+  .topbar {
+    padding: 16px 5%;
   }
 
-  p {
-    font-size: 14px;
-    line-height: 1.8;
+  .primary-nav {
+    order: 3;
+    width: 100%;
   }
-}
-
-.api-details {
-  color: #475569;
-
-  strong {
-    color: #17253d;
-  }
-}
-
-.api-error {
-  color: #dc2626;
-  font-weight: 600;
 }

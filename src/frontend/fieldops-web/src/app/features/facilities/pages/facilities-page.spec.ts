@@ -1,0 +1,478 @@
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting
+} from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { Facility } from '../models/facility.model';
+import { FacilitiesPage } from './facilities-page';
+
+describe('FacilitiesPage', () => {
+  let httpMock: HttpTestingController;
+
+  const activeFacility: Facility = {
+    id: '00000000-0000-0000-0000-000000000002',
+    code: 'FAC-002',
+    name: 'Centro de Operaciones Sevilla Este',
+    city: 'Sevilla',
+    address: 'Avenida de la Innovación 25',
+    isActive: true
+  };
+
+  const inactiveFacility: Facility = {
+    id: '00000000-0000-0000-0000-000000000001',
+    code: 'FAC-001',
+    name: 'Centro Logístico Córdoba Norte',
+    city: 'Córdoba',
+    address: 'Calle Innovación 25',
+    isActive: false
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [FacilitiesPage],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting()
+      ]
+    });
+
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should confirm deactivation with PATCH and refresh the list', () => {
+    // Arrange: crear la pagina.
+    const fixture = TestBed.createComponent(FacilitiesPage);
+
+    fixture.detectChanges();
+
+    // Simular la carga inicial de instalaciones.
+    const initialRequest = httpMock.expectOne('/api/facilities');
+
+    expect(initialRequest.request.method).toBe('GET');
+
+    initialRequest.flush([
+      inactiveFacility,
+      activeFacility
+    ]);
+
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    // Localizar el boton Desactivar de FAC-002.
+    const deactivateButton =
+      compiled.querySelector<HTMLButtonElement>(
+        '.deactivate-button'
+      );
+
+    expect(deactivateButton).not.toBeNull();
+
+    // Act: solicitar la desactivacion.
+    deactivateButton!.click();
+
+    fixture.detectChanges();
+
+    // El panel debe aparecer antes de enviar el PATCH.
+    expect(
+      compiled.querySelector('.deactivation-panel')
+    ).not.toBeNull();
+
+    httpMock.expectNone(
+      `/api/facilities/${activeFacility.id}/deactivate`
+    );
+
+    // Confirmar la desactivacion.
+    const confirmButton =
+      compiled.querySelector<HTMLButtonElement>(
+        '.confirm-deactivation'
+      );
+
+    expect(confirmButton).not.toBeNull();
+
+    confirmButton!.click();
+
+    // Assert: comprobar la peticion PATCH.
+    const patchRequest = httpMock.expectOne(
+      `/api/facilities/${activeFacility.id}/deactivate`
+    );
+
+    expect(patchRequest.request.method).toBe('PATCH');
+
+    // Simular la respuesta correcta de ASP.NET Core.
+    patchRequest.flush(null, {
+      status: 204,
+      statusText: 'No Content'
+    });
+
+    // Angular debe consultar nuevamente las instalaciones.
+    const refreshRequest = httpMock.expectOne('/api/facilities');
+
+    expect(refreshRequest.request.method).toBe('GET');
+
+    refreshRequest.flush([
+      inactiveFacility,
+      {
+        ...activeFacility,
+        isActive: false
+      }
+    ]);
+
+    fixture.detectChanges();
+
+    // El panel de confirmacion debe desaparecer.
+    expect(
+      compiled.querySelector('.deactivation-panel')
+    ).toBeNull();
+
+    // Debe aparecer el mensaje de exito.
+    const successMessage = compiled.querySelector(
+      '.success-message'
+    );
+
+    expect(successMessage?.textContent).toContain(
+      'Instalación FAC-002 desactivada correctamente.'
+    );
+
+    // FAC-002 debe aparecer como Inactiva.
+    const rows = Array.from(
+      compiled.querySelectorAll<HTMLTableRowElement>('tbody tr')
+    );
+
+    const updatedRow = rows.find(
+      row => row.textContent?.includes('FAC-002')
+    );
+
+    expect(updatedRow).toBeDefined();
+    expect(updatedRow?.textContent).toContain('Inactiva');
+
+    // Ninguna instalacion inactiva debe mostrar Desactivar.
+    expect(
+      compiled.querySelectorAll('.deactivate-button').length
+    ).toBe(0);
+  });
+  for (const testCase of [
+    {
+      label: '404 Not Found',
+      status: 404,
+      message: 'La instalación ya no existe. Actualiza el listado.'
+    },
+    {
+      label: 'network error',
+      status: 0,
+      message: 'No se pudo conectar con el servidor.'
+    }
+  ]) {
+    it(`should handle ${testCase.label} during deactivation`, () => {
+      // Arrange: crear la pagina.
+      const fixture = TestBed.createComponent(FacilitiesPage);
+
+      fixture.detectChanges();
+
+      // Simular una instalacion activa en el listado.
+      const initialRequest = httpMock.expectOne('/api/facilities');
+
+      expect(initialRequest.request.method).toBe('GET');
+
+      initialRequest.flush([
+        inactiveFacility,
+        activeFacility
+      ]);
+
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      // Solicitar la desactivacion de FAC-002.
+      const deactivateButton =
+        compiled.querySelector<HTMLButtonElement>(
+          '.deactivate-button'
+        );
+
+      expect(deactivateButton).not.toBeNull();
+
+      deactivateButton!.click();
+
+      fixture.detectChanges();
+
+      // El panel de confirmacion debe aparecer.
+      expect(
+        compiled.querySelector('.deactivation-panel')
+      ).not.toBeNull();
+
+      // Confirmar la operacion.
+      const confirmButton =
+        compiled.querySelector<HTMLButtonElement>(
+          '.confirm-deactivation'
+        );
+
+      expect(confirmButton).not.toBeNull();
+
+      confirmButton!.click();
+
+      // Comprobar la peticion PATCH.
+      const patchRequest = httpMock.expectOne(
+        `/api/facilities/${activeFacility.id}/deactivate`
+      );
+
+      expect(patchRequest.request.method).toBe('PATCH');
+
+      // Simular el error correspondiente.
+      if (testCase.status === 0) {
+        patchRequest.error(new ProgressEvent('error'));
+      } else {
+        patchRequest.flush(
+          { title: 'Facility not found' },
+          {
+            status: 404,
+            statusText: 'Not Found'
+          }
+        );
+      }
+
+      fixture.detectChanges();
+
+      // Assert: el panel debe seguir abierto.
+      expect(
+        compiled.querySelector('.deactivation-panel')
+      ).not.toBeNull();
+
+      // Debe mostrarse el mensaje de error adecuado.
+      const errorMessage = compiled.querySelector(
+        '.deactivation-error'
+      );
+
+      expect(errorMessage?.textContent).toContain(
+        testCase.message
+      );
+
+      // No debe mostrarse un mensaje de exito.
+      expect(
+        compiled.querySelector('.success-message')
+      ).toBeNull();
+
+      // El boton debe volver a estar habilitado.
+      const confirmButtonAfterError =
+        compiled.querySelector<HTMLButtonElement>(
+          '.confirm-deactivation'
+        );
+
+      expect(confirmButtonAfterError?.disabled).toBe(false);
+
+      expect(confirmButtonAfterError?.textContent)
+        .toContain('Confirmar desactivación');
+
+      // El usuario debe poder cancelar despues del error.
+      const cancelButton =
+        compiled.querySelector<HTMLButtonElement>(
+          '.cancel-action'
+        );
+
+      expect(cancelButton?.disabled).toBe(false);
+
+      // No debe recargarse el listado tras un error.
+      httpMock.expectNone('/api/facilities');
+
+      // La instalacion debe seguir apareciendo como activa.
+      expect(
+        compiled.querySelectorAll('.deactivate-button').length
+      ).toBe(1);
+    });
+  }
+  it('should prevent duplicate PATCH requests during deactivation', () => {
+    // Arrange: crear la página y cargar las instalaciones.
+    const fixture = TestBed.createComponent(FacilitiesPage);
+
+    fixture.detectChanges();
+
+    const initialRequest = httpMock.expectOne('/api/facilities');
+
+    initialRequest.flush([
+      inactiveFacility,
+      activeFacility
+    ]);
+
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    // Solicitar la desactivación de FAC-002.
+    const deactivateButton =
+      compiled.querySelector<HTMLButtonElement>(
+        '.deactivate-button'
+      );
+
+    expect(deactivateButton).not.toBeNull();
+
+    deactivateButton!.click();
+
+    fixture.detectChanges();
+
+    // Localizar el botón de confirmación.
+    const confirmDebugElement = fixture.debugElement.query(
+      By.css('.confirm-deactivation')
+    );
+
+    expect(confirmDebugElement).not.toBeNull();
+
+    const confirmButton =
+      confirmDebugElement.nativeElement as HTMLButtonElement;
+
+    expect(confirmButton.disabled).toBe(false);
+
+    // Act: confirmar la desactivación por primera vez.
+    confirmButton.click();
+
+    fixture.detectChanges();
+
+    // Mientras el PATCH está pendiente, el botón debe bloquearse.
+    expect(confirmButton.disabled).toBe(true);
+
+    expect(confirmButton.textContent)
+      .toContain('Desactivando...');
+
+    // El botón Cancelar también debe estar bloqueado.
+    const cancelButton =
+      compiled.querySelector<HTMLButtonElement>(
+        '.cancel-action'
+      );
+
+    expect(cancelButton?.disabled).toBe(true);
+
+    // Simular una segunda activación del manejador,
+    // incluso saltándonos el bloqueo visual del botón.
+    confirmDebugElement.triggerEventHandler(
+      'click',
+      new MouseEvent('click')
+    );
+
+    // Assert: debe existir exactamente una petición PATCH.
+    const patchRequest = httpMock.expectOne(
+      `/api/facilities/${activeFacility.id}/deactivate`
+    );
+
+    expect(patchRequest.request.method).toBe('PATCH');
+
+    // Todavía no debe haberse recargado el listado.
+    httpMock.expectNone('/api/facilities');
+
+    // Simular que ASP.NET Core completa la operación.
+    patchRequest.flush(null, {
+      status: 204,
+      statusText: 'No Content'
+    });
+
+    // La aplicación debe actualizar el listado una sola vez.
+    const refreshRequest = httpMock.expectOne(
+      '/api/facilities'
+    );
+
+    refreshRequest.flush([
+      inactiveFacility,
+      {
+        ...activeFacility,
+        isActive: false
+      }
+    ]);
+
+    fixture.detectChanges();
+
+    // El panel debe cerrarse al finalizar correctamente.
+    expect(
+      compiled.querySelector('.deactivation-panel')
+    ).toBeNull();
+
+    // Debe mostrarse el mensaje de éxito.
+    expect(
+      compiled.querySelector('.success-message')?.textContent
+    ).toContain(
+      'Instalación FAC-002 desactivada correctamente.'
+    );
+
+    // Ya no deben aparecer botones Desactivar.
+    expect(
+      compiled.querySelectorAll('.deactivate-button').length
+    ).toBe(0);
+  });
+  it('should cancel deactivation without sending a PATCH request', () => {
+    // Arrange: crear la pagina.
+    const fixture = TestBed.createComponent(FacilitiesPage);
+
+    fixture.detectChanges();
+
+    // Simular la carga inicial de instalaciones.
+    const getRequest = httpMock.expectOne('/api/facilities');
+
+    expect(getRequest.request.method).toBe('GET');
+
+    getRequest.flush([
+      inactiveFacility,
+      activeFacility
+    ]);
+
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    // Solo la instalacion activa puede desactivarse.
+    const deactivateButtons =
+      compiled.querySelectorAll<HTMLButtonElement>(
+        '.deactivate-button'
+      );
+
+    expect(deactivateButtons.length).toBe(1);
+
+    expect(
+      deactivateButtons[0].getAttribute('aria-label')
+    ).toContain('FAC-002');
+
+    // Act: pulsar Desactivar.
+    deactivateButtons[0].click();
+
+    fixture.detectChanges();
+
+    // Debe mostrarse el panel de confirmacion.
+    const confirmationPanel = compiled.querySelector(
+      '.deactivation-panel'
+    );
+
+    expect(confirmationPanel).not.toBeNull();
+
+    expect(confirmationPanel?.textContent)
+      .toContain('FAC-002');
+
+    // Act: cancelar la operacion.
+    const cancelButton =
+      compiled.querySelector<HTMLButtonElement>(
+        '.cancel-action'
+      );
+
+    expect(cancelButton).not.toBeNull();
+
+    cancelButton!.click();
+
+    fixture.detectChanges();
+
+    // Assert: el panel debe desaparecer.
+    expect(
+      compiled.querySelector('.deactivation-panel')
+    ).toBeNull();
+
+    // El boton Desactivar debe seguir disponible.
+    expect(
+      compiled.querySelectorAll('.deactivate-button').length
+    ).toBe(1);
+
+    // No debe enviarse ninguna peticion PATCH.
+    httpMock.expectNone(
+      `/api/facilities/${activeFacility.id}/deactivate`
+    );
+  });
+});
