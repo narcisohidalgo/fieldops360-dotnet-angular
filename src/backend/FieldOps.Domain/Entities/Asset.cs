@@ -1,25 +1,45 @@
-﻿namespace FieldOps.Domain.Entities;
+namespace FieldOps.Domain.Entities;
 
 public sealed class Asset
 {
     private Asset() { } // EF Core
 
-    public Asset(Guid facilityId, string code, string name, string? description = null)
+    public Asset(
+        Guid facilityId,
+        string code,
+        string name,
+        string? description = null)
     {
         if (facilityId == Guid.Empty)
-            throw new ArgumentException("Facility ID is required.", nameof(facilityId));
+        {
+            throw new ArgumentException(
+                "Facility ID is required.",
+                nameof(facilityId));
+        }
 
-        if (string.IsNullOrWhiteSpace(code))
-            throw new ArgumentException("Asset code is required.", nameof(code));
+        var validatedCode = ValidateRequired(
+            code, nameof(code), 50);
 
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Asset name is required.", nameof(name));
+        var validatedName = ValidateRequired(
+            name, nameof(name), 150);
+
+        var validatedDescription = description?.Trim();
+
+        if (validatedDescription?.Length > 500)
+        {
+            throw new ArgumentException(
+                "Description cannot exceed 500 characters.",
+                nameof(description));
+        }
 
         Id = Guid.NewGuid();
         FacilityId = facilityId;
-        Code = code.Trim();
-        Name = name.Trim();
-        Description = description?.Trim();
+        Code = validatedCode;
+        Name = validatedName;
+        Description = string.IsNullOrWhiteSpace(validatedDescription)
+            ? null
+            : validatedDescription;
+
         IsActive = true;
     }
 
@@ -31,4 +51,59 @@ public sealed class Asset
     public bool IsActive { get; private set; } = true;
 
     public Facility Facility { get; private set; } = null!;
+
+    public void Activate()
+    {
+        IsActive = true;
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+    }
+
+    public void UpdateDetails(string name, string? description)
+    {
+        var validatedName = ValidateRequired(
+            name, nameof(name), 150);
+
+        var validatedDescription = description?.Trim();
+
+        if (validatedDescription?.Length > 500)
+        {
+            throw new ArgumentException(
+                "Description cannot exceed 500 characters.",
+                nameof(description));
+        }
+
+        Name = validatedName;
+
+        Description = string.IsNullOrWhiteSpace(validatedDescription)
+            ? null
+            : validatedDescription;
+    }
+
+    private static string ValidateRequired(
+        string value,
+        string parameterName,
+        int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ArgumentException(
+                $"{parameterName} is required.",
+                parameterName);
+        }
+
+        var trimmedValue = value.Trim();
+
+        if (trimmedValue.Length > maxLength)
+        {
+            throw new ArgumentException(
+                $"{parameterName} cannot exceed {maxLength} characters.",
+                parameterName);
+        }
+
+        return trimmedValue;
+    }
 }

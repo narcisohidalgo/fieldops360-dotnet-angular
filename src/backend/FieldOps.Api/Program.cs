@@ -1,3 +1,4 @@
+using FieldOps.Application.Assets;
 using FieldOps.Application.Facilities;
 using FieldOps.Infrastructure;
 
@@ -11,6 +12,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddScoped<IFacilityService, FacilityService>();
+builder.Services.AddScoped<IAssetService, AssetService>();
 
 var app = builder.Build();
 

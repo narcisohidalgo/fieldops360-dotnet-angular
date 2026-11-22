@@ -1,4 +1,4 @@
-﻿import { Routes } from '@angular/router';
+import { Routes } from '@angular/router';
 
 export const routes: Routes = [
   {
@@ -14,6 +14,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/facilities/pages/facilities-page')
         .then(m => m.FacilitiesPage)
+  },
+  {
+    path: 'assets',
+    title: 'Activos | FieldOps 360',
+    loadComponent: () =>
+      import('./features/assets/pages/assets-page')
+        .then(m => m.AssetsPage)
   },
   {
     path: '**',

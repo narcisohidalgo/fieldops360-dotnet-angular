@@ -1,0 +1,194 @@
+<section class="assets-page">
+  <header class="page-header">
+    <div>
+      <h1>Gestión de activos</h1>
+      <p>
+        Consulta los equipos y recursos asociados a las
+        instalaciones de FieldOps 360.
+      </p>
+    </div>
+    <button
+      type="button"
+      class="create-button"
+      [disabled]="isLoading() || !hasActiveFacilities() || selectedAsset() !== null || statusTarget() !== null || isUpdatingStatus()"
+      [attr.aria-expanded]="showCreateForm()"
+      aria-controls="asset-create-panel"
+      (click)="toggleCreateForm()"
+    >
+      {{ showCreateForm() ? 'Cancelar' : '+ Nuevo activo' }}
+    </button>
+  </header>
+
+  @if (showCreateForm()) {
+    <div id="asset-create-panel" class="create-panel">
+      <app-asset-create-form
+        [facilities]="facilities()"
+        (created)="onAssetCreated($event)"
+      />
+    </div>
+  }
+
+  @if (selectedAsset(); as asset) {
+    <div class="edit-panel">
+      <app-asset-edit-form
+        [asset]="asset"
+        (saved)="onAssetUpdated()"
+        (cancelled)="cancelEdit()"
+      />
+    </div>
+  }
+
+  @if (statusTarget(); as asset) {
+    <section
+      class="status-panel"
+      [class.deactivate-theme]="asset.isActive"
+      [class.activate-theme]="!asset.isActive"
+      role="group"
+      aria-labelledby="asset-status-heading"
+    >
+      <h2 id="asset-status-heading">
+        {{ asset.isActive ? 'Confirmar desactivación' : 'Confirmar activación' }}
+      </h2>
+
+      <p>
+        ¿Quieres {{ asset.isActive ? 'desactivar' : 'activar' }}
+        el activo
+        <strong>{{ asset.code }} — {{ asset.name }}</strong>?
+      </p>
+
+      <p class="status-note">
+        @if (asset.isActive) {
+          El activo no se eliminará de la base de datos.
+          Permanecerá registrado como Inactivo.
+        } @else {
+          El activo volverá a estar disponible como Activo.
+          Sus datos actuales se conservarán.
+        }
+      </p>
+
+      @if (statusError(); as error) {
+        <p class="status-error" role="alert">
+          {{ error }}
+        </p>
+      }
+
+      <div class="status-actions">
+        <button
+          type="button"
+          class="cancel-status"
+          [disabled]="isUpdatingStatus()"
+          (click)="cancelStatusChange()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          class="confirm-status"
+          [disabled]="isUpdatingStatus()"
+          (click)="confirmStatusChange()"
+        >
+          @if (isUpdatingStatus()) {
+            {{ asset.isActive ? 'Desactivando...' : 'Activando...' }}
+          } @else {
+            {{ asset.isActive ? 'Confirmar desactivación' : 'Confirmar activación' }}
+          }
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="success-message" role="status">
+      {{ message }}
+    </p>
+  }
+
+  @if (isLoading()) {
+    <p class="message" role="status">
+      Cargando activos...
+    </p>
+  } @else if (errorMessage()) {
+    <div class="message error" role="alert">
+      <p>{{ errorMessage() }}</p>
+
+      <button type="button" (click)="loadAssets()">
+        Reintentar
+      </button>
+    </div>
+  } @else if (assets().length === 0) {
+    <p class="message">
+      Todavía no hay activos registrados.
+    </p>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Código</th>
+            <th scope="col">Nombre</th>
+            <th scope="col">Descripción</th>
+            <th scope="col">Instalación</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (asset of assets(); track asset.id) {
+            <tr>
+              <td>{{ asset.code }}</td>
+
+              <td>{{ asset.name }}</td>
+
+              <td>
+                {{ asset.description ?? 'Sin descripción' }}
+              </td>
+
+              <td>
+                {{
+                  facilityNames().get(asset.facilityId)
+                    ?? 'Instalación no disponible'
+                }}
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [class.inactive]="!asset.isActive"
+                >
+                  {{ asset.isActive ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button
+                    type="button"
+                    class="edit-button"
+                  [disabled]="isLoading() || isUpdatingStatus() || statusTarget() !== null || selectedAsset() !== null || showCreateForm()"
+                  [attr.aria-label]="'Editar activo ' + asset.code"
+                  (click)="editAsset(asset)"
+                >
+                  Editar
+                </button>
+
+                <button
+                  type="button"
+                  class="status-button"
+                  [class.deactivate-button]="asset.isActive"
+                  [class.activate-button]="!asset.isActive"
+                  [disabled]="isLoading() || isUpdatingStatus() || statusTarget() !== null || selectedAsset() !== null || showCreateForm()"
+                  [attr.aria-label]="(asset.isActive ? 'Desactivar' : 'Activar') + ' activo ' + asset.code"
+                  (click)="requestStatusChange(asset)"
+                >
+                  {{ asset.isActive ? 'Desactivar' : 'Activar' }}
+                </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

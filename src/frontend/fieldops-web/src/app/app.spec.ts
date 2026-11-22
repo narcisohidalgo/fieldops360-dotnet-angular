@@ -1,4 +1,4 @@
-﻿import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { App } from './app';
@@ -31,9 +31,10 @@ describe('App', () => {
       '.primary-nav a'
     );
 
-    expect(links.length).toBe(2);
+    expect(links.length).toBe(3);
     expect(links[0].getAttribute('href')).toBe('/');
     expect(links[1].getAttribute('href')).toBe('/facilities');
+    expect(links[2].getAttribute('href')).toBe('/assets');
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });

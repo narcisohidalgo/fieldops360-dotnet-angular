@@ -1,0 +1,75 @@
+<section class="asset-edit-form">
+  <h2>Editar activo</h2>
+
+  <p class="asset-info">
+    Código: <strong>{{ asset().code }}</strong>
+  </p>
+
+  <p class="asset-info">
+    La instalación asociada y el código no pueden
+    modificarse desde este formulario.
+  </p>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+    <div class="form-field">
+      <label for="edit-asset-name">Nombre *</label>
+
+      <input
+        id="edit-asset-name"
+        type="text"
+        formControlName="name"
+        maxlength="150"
+      />
+
+      @if (form.controls.name.touched && form.controls.name.invalid) {
+        <small class="field-error">
+          Introduce un nombre válido de hasta 150 caracteres.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="edit-asset-description">Descripción</label>
+
+      <textarea
+        id="edit-asset-description"
+        formControlName="description"
+        maxlength="500"
+        rows="4"
+      ></textarea>
+
+      @if (form.controls.description.touched &&
+           form.controls.description.invalid) {
+        <small class="field-error">
+          La descripción no puede superar los 500 caracteres.
+        </small>
+      }
+    </div>
+
+    @if (saveError(); as error) {
+      <p class="save-error" role="alert">
+        {{ error }}
+      </p>
+    }
+
+    <div class="form-actions">
+      <button
+        type="button"
+        class="cancel-button"
+        [disabled]="isSaving()"
+        (click)="cancelled.emit()"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="submit"
+        class="save-button"
+        [disabled]="isSaving()"
+      >
+        {{ isSaving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </form>
+</section>
