@@ -1,4 +1,5 @@
 using FieldOps.Application.Assets;
+using FieldOps.Application.Incidents;
 using FieldOps.Application.Facilities;
 using FieldOps.Infrastructure;
 
@@ -13,6 +14,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddScoped<IFacilityService, FacilityService>();
 builder.Services.AddScoped<IAssetService, AssetService>();
+builder.Services.AddScoped<IIncidentService, IncidentService>();
 
 var app = builder.Build();
 

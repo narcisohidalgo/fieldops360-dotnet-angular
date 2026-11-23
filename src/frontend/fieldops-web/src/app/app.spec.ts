@@ -31,10 +31,11 @@ describe('App', () => {
       '.primary-nav a'
     );
 
-    expect(links.length).toBe(3);
+    expect(links.length).toBe(4);
     expect(links[0].getAttribute('href')).toBe('/');
     expect(links[1].getAttribute('href')).toBe('/facilities');
     expect(links[2].getAttribute('href')).toBe('/assets');
+    expect(links[3].getAttribute('href')).toBe('/incidents');
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });

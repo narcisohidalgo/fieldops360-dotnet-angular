@@ -1,0 +1,305 @@
+<section class="incidents-page">
+  <header class="page-header">
+    <div>
+      <h1>Gestión de incidencias</h1>
+      <p>
+        Registra, consulta y gestiona las incidencias
+        de las instalaciones y sus activos.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="create-button"
+      [disabled]="isLoading() || !canCreate() || selectedIncident() !== null || statusTarget() !== null || isUpdatingStatus() || isCreatingIncident()"
+      [attr.aria-expanded]="showCreateForm()"
+      aria-controls="incident-create-panel"
+      (click)="toggleCreateForm()"
+    >
+      {{ showCreateForm() ? 'Cancelar' : '+ Nueva incidencia' }}
+    </button>
+  </header>
+
+  @if (showCreateForm()) {
+    <div id="incident-create-panel" class="form-panel">
+      <app-incident-create-form
+        [facilities]="facilities()"
+        [assets]="assets()"
+        (savingChange)="onCreateSavingChanged($event)"
+        (created)="onIncidentCreated($event)"
+      />
+    </div>
+  }
+
+  @if (selectedIncident(); as incident) {
+    <div class="form-panel">
+      <app-incident-edit-form
+        [incident]="incident"
+        (saved)="onIncidentUpdated()"
+        (cancelled)="cancelEdit()"
+      />
+    </div>
+  }
+
+  @if (statusTarget(); as target) {
+    <section
+      class="status-panel"
+      role="group"
+      aria-labelledby="incident-status-heading"
+    >
+      <h2 id="incident-status-heading">
+        Confirmar cambio de estado
+      </h2>
+
+      <p>
+        ¿Quieres ejecutar la acción
+        <strong>{{ getStatusActionLabel(target.action) }}</strong>
+        sobre la incidencia
+        <strong>{{ target.incident.title }}</strong>?
+      </p>
+
+      <p class="status-note">
+        {{ getStatusLabel(target.incident.status) }}
+        →
+        {{ getStatusDestinationLabel(target.action) }}
+      </p>
+
+      <p class="status-note">
+        La incidencia y sus relaciones con la instalación
+        y el activo se conservarán.
+      </p>
+
+      @if (statusError(); as error) {
+        <p class="status-error" role="alert">
+          {{ error }}
+        </p>
+
+        <button
+          type="button"
+          class="refresh-status"
+          [disabled]="isUpdatingStatus()"
+          (click)="refreshAfterStatusError()"
+        >
+          Actualizar listado
+        </button>
+      }
+
+      <div class="status-actions">
+        <button
+          type="button"
+          class="cancel-status"
+          [disabled]="isUpdatingStatus()"
+          (click)="cancelStatusChange()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          class="confirm-status"
+          [disabled]="isUpdatingStatus()"
+          (click)="confirmStatusChange()"
+        >
+          @if (isUpdatingStatus()) {
+            Actualizando...
+          } @else {
+            Confirmar {{ getStatusActionLabel(target.action).toLowerCase() }}
+          }
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="success-message" role="status">
+      {{ message }}
+    </p>
+  }
+
+  <section class="filters" aria-label="Filtros de incidencias">
+    <div class="filter-field">
+      <label for="filter-incident-facility">Instalación</label>
+
+      <select
+        #facilityFilter
+        id="filter-incident-facility"
+        [value]="selectedFacilityId()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="onFacilityFilterChanged(facilityFilter.value)"
+      >
+        <option value="">Todas las instalaciones</option>
+
+        @for (facility of facilities(); track facility.id) {
+          <option [value]="facility.id">
+            {{ facility.code }} — {{ facility.name }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-incident-status">Estado</label>
+
+      <select
+        #statusFilter
+        id="filter-incident-status"
+        [value]="selectedStatus()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="onStatusFilterChanged(statusFilter.value)"
+      >
+        <option value="">Todos los estados</option>
+
+        @for (status of statuses; track status.value) {
+          <option [value]="status.value">
+            {{ status.label }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-incident-priority">Prioridad</label>
+
+      <select
+        #priorityFilter
+        id="filter-incident-priority"
+        [value]="selectedPriority()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="onPriorityFilterChanged(priorityFilter.value)"
+      >
+        <option value="">Todas las prioridades</option>
+
+        @for (priority of priorities; track priority.value) {
+          <option [value]="priority.value">
+            {{ priority.label }}
+          </option>
+        }
+      </select>
+    </div>
+  </section>
+
+  @if (isLoading()) {
+    <p class="message" role="status">
+      Cargando incidencias...
+    </p>
+  } @else if (errorMessage(); as error) {
+    <div class="message error" role="alert">
+      <p>{{ error }}</p>
+
+      <button
+        type="button"
+        (click)="loadIncidents()"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else if (incidents().length === 0) {
+    <p class="message">
+      No hay incidencias que coincidan con los filtros seleccionados.
+    </p>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Incidencia</th>
+            <th scope="col">Instalación</th>
+            <th scope="col">Activo</th>
+            <th scope="col">Prioridad</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Creación</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (incident of incidents(); track incident.id) {
+            <tr>
+              <td>
+                <strong>{{ incident.title }}</strong>
+
+                <span class="description">
+                  {{ incident.description ?? 'Sin descripción' }}
+                </span>
+              </td>
+
+              <td>
+                {{
+                  facilityNames().get(incident.facilityId)
+                    ?? 'Instalación no disponible'
+                }}
+              </td>
+
+              <td>
+                @if (incident.assetId) {
+                  {{
+                    assetNames().get(incident.assetId)
+                      ?? 'Activo no disponible'
+                  }}
+                } @else {
+                  Incidencia general
+                }
+              </td>
+
+              <td>
+                <span
+                  class="priority"
+                  [class.high]="incident.priority === 3"
+                  [class.critical]="incident.priority === 4"
+                >
+                  {{ getPriorityLabel(incident.priority) }}
+                </span>
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [class.in-progress]="incident.status === statusEnum.InProgress"
+                  [class.resolved]="incident.status === statusEnum.Resolved"
+                  [class.closed]="incident.status === statusEnum.Closed"
+                >
+                  {{ getStatusLabel(incident.status) }}
+                </span>
+              </td>
+
+              <td>
+                {{ incident.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+
+              <td>
+                <div class="row-actions">
+                  <button
+                    type="button"
+                    class="edit-button"
+                    [disabled]="isLoading() || isBusy() || !canEdit(incident)"
+                    [attr.aria-label]="'Editar incidencia ' + incident.title"
+                    (click)="editIncident(incident)"
+                  >
+                    Editar
+                  </button>
+
+                  @for (
+                    action of getAvailableStatusActions(incident);
+                    track action
+                  ) {
+                    <button
+                      type="button"
+                      class="status-button"
+                      [class.reopen-button]="action === 'reopen'"
+                      [class.close-button]="action === 'close'"
+                      [disabled]="isLoading() || isBusy()"
+                      [attr.aria-label]="getStatusActionLabel(action) + ' incidencia ' + incident.title"
+                      (click)="requestStatusChange(incident, action)"
+                    >
+                      {{ getStatusActionLabel(action) }}
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
