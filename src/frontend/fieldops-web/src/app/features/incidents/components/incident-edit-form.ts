@@ -166,8 +166,8 @@ export class IncidentEditForm {
 
               case 409:
                 this.saveError.set(
-                  'La incidencia ya está resuelta o cerrada. ' +
-                  'Debes reabrirla para editarla.'
+                  'La incidencia ha cambiado o ya no permite editarse. ' +
+                  'Actualiza el listado y vuelve a intentarlo.'
                 );
                 break;
 

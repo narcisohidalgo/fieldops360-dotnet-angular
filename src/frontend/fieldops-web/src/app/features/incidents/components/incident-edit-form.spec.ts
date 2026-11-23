@@ -456,8 +456,8 @@ describe('IncidentEditForm', () => {
     },
     {
       status: 409,
-      label: 'status conflict',
-      message: 'Debes reabrirla para editarla.'
+      label: 'concurrent update or invalid state',
+      message: 'Actualiza el listado y vuelve a intentarlo.'
     },
     {
       status: 0,

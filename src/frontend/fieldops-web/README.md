@@ -1,59 +1,107 @@
-# FieldopsWeb
+# FieldOps 360 - Angular Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.3.0.
+Angular 22 frontend for FieldOps 360, an operations and maintenance management portfolio project.
 
-## Development server
+The application communicates with an ASP.NET Core 10 REST API backed by SQL Server and Entity Framework Core.
 
-To start a local development server, run:
+See the [main project README](../../../README.md) for architecture, backend configuration and database migrations.
 
-```bash
-ng serve
-```
+## Technology stack
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- Angular 22 and TypeScript
+- Standalone components and lazy-loaded routes
+- Angular signals and computed state
+- Reactive Forms and validation
+- HttpClient and RxJS
+- SCSS
+- Vitest unit and component tests
 
-## Code scaffolding
+## Implemented modules
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+| Route | Module | Features |
+| --- | --- | --- |
+| / | Home | Application landing page |
+| /facilities | Facilities | Create, edit, list and activate/deactivate facilities |
+| /assets | Assets | Manage equipment associated with facilities |
+| /incidents | Incidents | Create, edit, filter and change incident status |
 
-```bash
-ng generate component component-name
-```
+## Incident management
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Incidents belong to a facility and can optionally reference an asset from the same facility.
 
-```bash
-ng generate --help
-```
+Supported priorities:
 
-## Building
+- Low
+- Medium
+- High
+- Critical
 
-To build the project run:
+Supported workflow:
 
-```bash
-ng build
-```
+    Open -> InProgress -> Resolved -> Closed
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Resolved and closed incidents can be reopened.
 
-## Running unit tests
+The UI provides validated forms, filters, confirmation panels, loading states and HTTP error handling.
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+The API can return HTTP 409 for invalid state transitions or concurrent modifications.
 
-```bash
-ng test
-```
+## Local development
 
-## Running end-to-end tests
+### Requirements
 
-For end-to-end (e2e) testing, run:
+- Node.js and npm compatible with Angular 22
+- ASP.NET Core 10 backend
+- SQL Server with the EF Core migrations applied
 
-```bash
-ng e2e
-```
+Configure and start the backend using the instructions in the main project README.
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+From this frontend directory, install dependencies:
 
-## Additional Resources
+    npm ci
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Start the Angular development server:
+
+    npm start
+
+Open http://localhost:4200
+
+The development proxy defined in src/proxy.conf.json forwards API requests to http://127.0.0.1:5080.
+
+## Tests
+
+Run all Angular tests:
+
+    npm test -- --watch=false
+
+Build the production application:
+
+    npm run build
+
+At the end of Phase 7, the frontend passed 175 Vitest tests across 16 test files.
+
+The production build was also verified successfully.
+
+These results describe the local Phase 7 baseline, not continuous integration.
+
+## Project structure
+
+The frontend groups functionality by feature under src/app/features:
+
+- home
+- facilities
+- assets
+- incidents
+
+Each feature contains its corresponding components, models, pages, services and tests as needed.
+
+## Current limitations
+
+- Authentication and authorization are not yet implemented.
+- Browser-side version preconditions for stale edits remain future work.
+- Automated browser end-to-end tests are planned.
+- Production deployment and security hardening remain future work.
+
+This frontend is intended for local development and portfolio demonstration.
+
+See the [main README](../../../README.md) for the complete roadmap and security notes.
