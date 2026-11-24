@@ -1,0 +1,160 @@
+<section class="work-order-edit-form">
+  <h2>Editar orden de trabajo</h2>
+
+  <p class="order-info">
+    Orden:
+    <strong>{{ workOrder().code }} — {{ workOrder().title }}</strong>
+  </p>
+
+  <p class="order-info">
+    El código, la instalación, el activo, la incidencia,
+    el técnico y el estado no pueden modificarse desde
+    este formulario.
+  </p>
+
+  @if (!canEdit()) {
+    <p class="edit-warning" role="alert">
+      Solo se pueden editar órdenes planificadas.
+      Esta orden ya ha cambiado de estado.
+    </p>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+    <fieldset [disabled]="isSaving() || !canEdit()">
+      <div class="form-field">
+        <label for="edit-work-order-title">Título *</label>
+
+        <input
+          id="edit-work-order-title"
+          type="text"
+          formControlName="title"
+          maxlength="150"
+          autocomplete="off"
+        />
+
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <small class="field-error">
+            Introduce un título válido de hasta 150 caracteres.
+          </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="edit-work-order-description">Descripción</label>
+
+        <textarea
+          id="edit-work-order-description"
+          formControlName="description"
+          maxlength="2000"
+          rows="4"
+        ></textarea>
+
+        @if (form.controls.description.touched && form.controls.description.invalid) {
+          <small class="field-error">
+            La descripción no puede superar los 2000 caracteres.
+          </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="edit-work-order-priority">Prioridad *</label>
+
+        <select
+          id="edit-work-order-priority"
+          formControlName="priority"
+        >
+          @for (priority of priorities; track priority.value) {
+            <option [value]="priority.value">
+              {{ priority.label }}
+            </option>
+          }
+        </select>
+
+        @if (form.controls.priority.touched && form.controls.priority.invalid) {
+          <small class="field-error">
+            Selecciona una prioridad válida.
+          </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="edit-work-order-start-date">
+          Inicio previsto (opcional)
+        </label>
+
+        <input
+          id="edit-work-order-start-date"
+          type="datetime-local"
+          step="1"
+          formControlName="scheduledStartLocal"
+        />
+
+        @if (
+          form.controls.scheduledStartLocal.touched &&
+          form.controls.scheduledStartLocal.invalid
+        ) {
+          <small class="field-error">
+            La fecha de inicio no es válida.
+          </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="edit-work-order-due-date">
+          Fecha límite (opcional)
+        </label>
+
+        <input
+          id="edit-work-order-due-date"
+          type="datetime-local"
+          step="1"
+          formControlName="dueAtLocal"
+        />
+
+        @if (
+          form.controls.dueAtLocal.touched &&
+          form.controls.dueAtLocal.invalid
+        ) {
+          <small class="field-error">
+            La fecha límite no es válida.
+          </small>
+        }
+      </div>
+
+      @if (form.hasError('dueBeforeStart')) {
+        <p class="field-error" role="alert">
+          La fecha límite no puede ser anterior al inicio previsto.
+        </p>
+      }
+    </fieldset>
+
+    <p class="form-note">
+      Las fechas se muestran en hora local y se guardan en UTC.
+    </p>
+
+    @if (saveError(); as error) {
+      <p class="save-error" role="alert">
+        {{ error }}
+      </p>
+    }
+
+    <div class="form-actions">
+      <button
+        type="button"
+        class="cancel-button"
+        [disabled]="isSaving()"
+        (click)="cancelled.emit()"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="submit"
+        class="save-button"
+        [disabled]="isSaving() || !canEdit()"
+      >
+        {{ isSaving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </form>
+</section>

@@ -14,6 +14,7 @@ public sealed class FieldOpsDbContext : DbContext
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<Incident> Incidents => Set<Incident>();
     public DbSet<Technician> Technicians => Set<Technician>();
+    public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

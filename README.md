@@ -2,9 +2,9 @@
 
 **Enterprise Operations & Maintenance Management Platform**
 
-FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents and technicians. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
+FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Facilities, Assets, Incidents and Technicians are implemented for local development and demonstration. Authentication, authorization, deployment hardening and other modules remain future work.
+> **Project status:** Facilities, Assets, Incidents, Technicians and Work Orders are implemented for local development and demonstration. Authentication, authorization, deployment hardening and other modules remain future work.
 
 ## Technology stack
 
@@ -50,13 +50,30 @@ Incident priorities: `Low` (1), `Medium` (2), `High` (3), `Critical` (4). Status
 - Update technician details without changing their codes.
 - Activate and deactivate technicians without deleting their records.
 - Manage technicians through Angular reactive forms, confirmation panels and error handling.
-- Technician assignment to work orders remains future work.
+- Assign and unassign active technicians to planned work orders.
+
+### Work orders
+
+- Create work orders with a unique code, title, optional description and priority.
+- Link each order to an existing facility, with optional asset, incident and technician references.
+- Validate facility/asset/incident consistency and require an active technician when assigning or starting work.
+- Retrieve individual orders and filter lists by facility, asset, incident, technician, status and priority.
+- Edit work order details and planned dates only while the order is **Planned**.
+- Assign or unassign technicians while an order is **Planned**.
+- Manage the workflow **Planned → InProgress → Completed**, with cancellation available from **Planned** or **InProgress**.
+- Require a cancellation reason and prevent changes to completed or cancelled orders.
+- Record creation, update, start, completion and cancellation timestamps in UTC.
+- Use Angular reactive forms, filter selectors, confirmation panels and error handling.
+- Preserve the original precision of unchanged scheduled dates when saving edits.
+- Enforce unique work order codes in SQL Server, with HTTP 409 Conflict for duplicates.
+
+Priorities: `Low` (1), `Medium` (2), `High` (3), `Critical` (4). Statuses: `Planned` (1), `InProgress` (2), `Completed` (3), `Cancelled` (4).
 
 ### Optimistic concurrency
 
-SQL Server `rowversion` is configured as an EF Core concurrency token for incidents. Concurrent updates based on the same previously loaded database version are detected, and the API returns HTTP 409 Conflict.
+SQL Server `rowversion` is configured as an EF Core concurrency token for incidents and work orders. Conflicting writes using the same previously loaded database version can be detected, with HTTP 409 Conflict returned by the API.
 
-The browser does not yet transmit an explicit version precondition. Full protection against stale edits from separately opened browser sessions is planned for a later phase.
+The browser does not yet transmit an explicit version precondition such as HTTP `If-Match`. Consequently, the application does not guarantee detection of stale edits from separately opened browser sessions. Client-side version preconditions remain future work.
 
 ## Architecture
 
@@ -97,6 +114,14 @@ The frontend uses feature-based folders under `src/app/features/`, Angular `Http
 | PUT | `/api/technicians/{id}` | Update technician details |
 | PATCH | `/api/technicians/{id}/activate` | Activate a technician |
 | PATCH | `/api/technicians/{id}/deactivate` | Deactivate a technician |
+| GET | `/api/work-orders` | List orders; optional `facilityId`, `assetId`, `incidentId`, `technicianId`, `status`, `priority` filters |
+| GET | `/api/work-orders/{id}` | Retrieve a work order |
+| POST | `/api/work-orders` | Create a work order |
+| PUT | `/api/work-orders/{id}` | Edit permitted planned-order details |
+| PATCH | `/api/work-orders/{id}/assign-technician` | Assign or unassign a technician |
+| PATCH | `/api/work-orders/{id}/start` | Planned → InProgress |
+| PATCH | `/api/work-orders/{id}/complete` | InProgress → Completed |
+| PATCH | `/api/work-orders/{id}/cancel` | Planned/InProgress → Cancelled |
 
 The Facilities and Assets controllers also provide their own create, update and activation/deactivation operations.
 
@@ -126,7 +151,7 @@ Run from the repository root:
 dotnet ef database update --project src/backend/FieldOps.Infrastructure/FieldOps.Infrastructure.csproj --startup-project src/backend/FieldOps.Api/FieldOps.Api.csproj --context FieldOpsDbContext
 ```
 
-This applies all available migrations, including `InitialCreate`, `AddIncidents`, `AddIncidentRowVersion` and `AddTechnicians`, as needed. The file `docs/database/InitialCreate.sql` represents **only the initial schema**, not the complete current schema; see [Database documentation](docs/database/README.md).
+This applies all available migrations, including `InitialCreate`, `AddIncidents`, `AddIncidentRowVersion`, `AddTechnicians` and `AddWorkOrders`, as needed. The file `docs/database/InitialCreate.sql` represents **only the initial schema**, not the complete current schema; see [Database documentation](docs/database/README.md).
 
 ### 3. Start the backend
 
@@ -156,6 +181,7 @@ Angular runs at `http://localhost:4200` and forwards `/api/**` requests to the b
 - `http://localhost:4200/assets` — Assets
 - `http://localhost:4200/incidents` — Incidents
 - `http://localhost:4200/technicians` — Technicians
+- `http://localhost:4200/work-orders` — Work Orders
 
 ## Tests
 
@@ -172,11 +198,14 @@ npm.cmd test -- --watch=false
 npm.cmd run build
 ```
 
-At completion of Phase 8 local validation (24 November 2026), the project passed **155 xUnit tests** and **234 Angular/Vitest tests**, with successful .NET Release and Angular production builds. Technician REST operations passed 15 functional HTTP checks; technician creation, editing, activation and deactivation were also verified in the browser against local SQL Server.
+At completion of Phase 9 local validation (24 November 2026), all .NET tests and **322 Angular/Vitest tests across 24 test files** passed. The .NET solution and Angular production build succeeded, and EF Core reported no pending model changes.
+
+Work Order REST operations passed 38 functional HTTP checks. An additional local concurrent-request check returned one HTTP 201 Created and one HTTP 409 Conflict for two requests using the same work order code; a further duplicate returned HTTP 409, and exactly one matching record was persisted. This validates the observed HTTP behavior but does not specifically prove that SQL Server's unique-index exception handler was exercised.
+
+Authentication, authorization and full client-side version preconditions are not implemented; the project remains a local-development portfolio demonstration.
 
 ## Roadmap
 
-- Work orders.
 - Automated integration/end-to-end tests, including database and API paths.
 - Authentication and authorization, plus deployment hardening.
 - Docker deployment and GitHub Actions CI/CD.

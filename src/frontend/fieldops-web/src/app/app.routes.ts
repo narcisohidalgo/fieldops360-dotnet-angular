@@ -37,6 +37,13 @@ export const routes: Routes = [
         .then(m => m.TechniciansPage)
   },
   {
+    path: 'work-orders',
+    title: 'Órdenes de trabajo | FieldOps 360',
+    loadComponent: () =>
+      import('./features/work-orders/pages/work-orders-page')
+        .then(m => m.WorkOrdersPage)
+  },
+  {
     path: '**',
     redirectTo: ''
   }

@@ -30,6 +30,15 @@ describe('App', () => {
     expect(typeof route?.loadComponent).toBe('function');
   });
 
+  it('should register the work orders lazy-loaded route', () => {
+    const route = routes.find(
+      route => route.path === 'work-orders'
+    );
+
+    expect(route).toBeDefined();
+    expect(route?.title).toBe('Órdenes de trabajo | FieldOps 360');
+    expect(typeof route?.loadComponent).toBe('function');
+  });
   it('should display navigation links', () => {
     const fixture = TestBed.createComponent(App);
 
@@ -41,12 +50,13 @@ describe('App', () => {
       '.primary-nav a'
     );
 
-    expect(links.length).toBe(5);
+    expect(links.length).toBe(6);
     expect(links[0].getAttribute('href')).toBe('/');
     expect(links[1].getAttribute('href')).toBe('/facilities');
     expect(links[2].getAttribute('href')).toBe('/assets');
     expect(links[3].getAttribute('href')).toBe('/incidents');
     expect(links[4].getAttribute('href')).toBe('/technicians');
+    expect(links[5].getAttribute('href')).toBe('/work-orders');
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });

@@ -8,8 +8,11 @@ The authoritative database schema is managed through **Entity Framework Core mig
 - `20261123130353_AddIncidents` — adds `Incidents`, with mandatory `FacilityId`, optional `AssetId`, priority/status fields, UTC timestamps and indices.
 - `20261123163133_AddIncidentRowVersion` — adds the SQL Server `rowversion` concurrency token to `Incidents`, allowing EF Core to detect conflicting concurrent updates.
 - `20261124045123_AddTechnicians` — creates `Technicians`, with a GUID primary key, required code/name/email, optional phone/specialty, active status and a unique index on `Code`.
+- `20261124064857_AddWorkOrders` — creates `WorkOrders`, with required facility, optional asset/incident/technician relationships, workflow and scheduling fields, UTC timestamps, a unique index on `Code`, query indexes and an EF Core SQL Server `rowversion` concurrency token. Foreign keys use restricted deletion.
 
-Technicians are currently independent of Facilities, Assets and Incidents. Technician codes cannot be changed through the update operation. Incident concurrency handling remains unchanged.
+Technicians are referenced optionally by Work Orders. Their codes cannot be changed through the technician update operation. Work Orders validate their facility, asset, incident and technician relationships at application level, while SQL Server foreign keys protect referential integrity.
+
+`WorkOrders.Code` is protected by a unique index. SQL Server `rowversion` detects conflicting writes within the EF Core persistence workflow. Explicit client version preconditions are not yet supported, so stale edits from earlier browser sessions are not fully protected.
 
 `InitialCreate.sql` is a historical snapshot **only of the initial migration**. Do not treat it as an up-to-date full-schema export. On a new database, prefer applying all EF Core migrations.
 

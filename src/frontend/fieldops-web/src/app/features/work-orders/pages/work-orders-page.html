@@ -1,0 +1,544 @@
+<section class="work-orders-page">
+  <header class="page-header">
+    <div>
+      <h1>Gestión de órdenes de trabajo</h1>
+      <p>
+        Planifica intervenciones, asigna técnicos y
+        realiza el seguimiento de su ejecución.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="create-button"
+      [disabled]="isLoading() || !canCreate() || isFormSaving() ||
+        selectedOrder() !== null || assignmentTarget() !== null ||
+        statusTarget() !== null || isAssigning() || isChangingStatus()"
+      [attr.aria-expanded]="showCreateForm()"
+      aria-controls="work-order-create-panel"
+      (click)="toggleCreateForm()"
+    >
+      {{ showCreateForm() ? 'Cerrar formulario' : '+ Nueva orden' }}
+    </button>
+  </header>
+
+  @if (showCreateForm()) {
+    <div
+      id="work-order-create-panel"
+      class="form-panel"
+    >
+      <app-work-order-create-form
+        [facilities]="facilities()"
+        [assets]="assets()"
+        [incidents]="incidents()"
+        [technicians]="technicians()"
+        (created)="onOrderCreated($event)"
+      />
+    </div>
+  }
+
+  @if (selectedOrder(); as order) {
+    <div class="form-panel">
+      <app-work-order-edit-form
+        [workOrder]="order"
+        (saved)="onOrderUpdated()"
+        (cancelled)="cancelEdit()"
+      />
+    </div>
+  }
+
+  @if (assignmentTarget(); as order) {
+    <section
+      class="action-panel"
+      role="group"
+      aria-labelledby="work-order-assignment-heading"
+    >
+      <h2 id="work-order-assignment-heading">
+        Asignación de técnico
+      </h2>
+
+      <p>
+        Orden <strong>{{ order.code }}</strong> —
+        {{ order.title }}
+      </p>
+
+      <p class="panel-note">
+        Técnico actual:
+        @if (order.technicianId) {
+          {{
+            technicianNames().get(order.technicianId) ??
+              'Técnico no disponible'
+          }}
+        } @else {
+          Sin asignar
+        }
+      </p>
+
+      <div class="panel-field">
+        <label for="work-order-assignment-technician">
+          Nuevo técnico
+        </label>
+
+        <select
+          #assignmentSelect
+          id="work-order-assignment-technician"
+          [value]="assignmentTechnicianId()"
+          [disabled]="isAssigning()"
+          (change)="assignmentTechnicianId.set(assignmentSelect.value)"
+        >
+          <option value="">Sin asignar</option>
+
+          @for (technician of activeTechnicians(); track technician.id) {
+            <option [value]="technician.id">
+              {{ technician.code }} — {{ technician.name }}
+            </option>
+          }
+        </select>
+
+        <small class="panel-note">
+          Solo se permiten técnicos activos.
+          Para iniciar una orden es obligatorio tener uno asignado.
+        </small>
+      </div>
+
+      @if (assignmentError(); as error) {
+        <p class="action-error" role="alert">
+          {{ error }}
+        </p>
+
+        <button
+          type="button"
+          class="refresh-button"
+          [disabled]="isAssigning()"
+          (click)="refreshAssignment()"
+        >
+          Actualizar listado
+        </button>
+      }
+
+      <div class="panel-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="isAssigning()"
+          (click)="cancelAssignment()"
+        >
+          Volver
+        </button>
+
+        <button
+          type="button"
+          class="primary-button"
+          [disabled]="isAssigning()"
+          (click)="confirmAssignment()"
+        >
+          {{ isAssigning() ? 'Guardando...' : 'Guardar asignación' }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (statusTarget(); as target) {
+    <section
+      class="action-panel"
+      role="group"
+      aria-labelledby="work-order-status-heading"
+    >
+      <h2 id="work-order-status-heading">
+        Confirmar cambio de estado
+      </h2>
+
+      <p>
+        ¿Quieres <strong>{{ getActionLabel(target.action).toLowerCase() }}</strong>
+        la orden <strong>{{ target.order.code }}</strong>?
+      </p>
+
+      <p class="panel-note">
+        {{ getStatusLabel(target.order.status) }}
+        →
+        {{ getActionDestination(target.action) }}
+      </p>
+
+      @if (target.action === 'start') {
+        <p class="panel-note">
+          La orden necesita un técnico asignado y activo
+          para poder iniciarse.
+        </p>
+      }
+
+      @if (target.action === 'cancel') {
+        <div class="panel-field">
+          <label for="work-order-cancellation-reason">
+            Motivo de cancelación *
+          </label>
+
+          <textarea
+            #reasonInput
+            id="work-order-cancellation-reason"
+            rows="3"
+            maxlength="500"
+            [value]="cancellationReason()"
+            [disabled]="isChangingStatus()"
+            (input)="cancellationReason.set(reasonInput.value)"
+          ></textarea>
+
+          <small class="panel-note">
+            El motivo es obligatorio (máximo 500 caracteres).
+          </small>
+        </div>
+      }
+
+      @if (statusError(); as error) {
+        <p class="action-error" role="alert">
+          {{ error }}
+        </p>
+
+        <button
+          type="button"
+          class="refresh-button"
+          [disabled]="isChangingStatus()"
+          (click)="refreshStatus()"
+        >
+          Actualizar listado
+        </button>
+      }
+
+      <div class="panel-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="isChangingStatus()"
+          (click)="cancelStatus()"
+        >
+          Volver
+        </button>
+
+        <button
+          type="button"
+          class="primary-button"
+          [disabled]="isChangingStatus() ||
+            (target.action === 'cancel' && !cancellationReason().trim())"
+          (click)="confirmStatus()"
+        >
+          @if (isChangingStatus()) {
+            Actualizando...
+          } @else {
+            Confirmar {{ getActionLabel(target.action).toLowerCase() }}
+          }
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="success-message" role="status">
+      {{ message }}
+    </p>
+  }
+
+  <section
+    class="filters"
+    aria-label="Filtros de órdenes de trabajo"
+  >
+    <div class="filter-field">
+      <label for="filter-work-order-facility">Instalación</label>
+
+      <select
+        #facilityFilter
+        id="filter-work-order-facility"
+        [value]="selectedFacilityId()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="changeFilter('facility', facilityFilter.value)"
+      >
+        <option value="">Todas las instalaciones</option>
+
+        @for (facility of facilities(); track facility.id) {
+          <option [value]="facility.id">
+            {{ facility.code }} — {{ facility.name }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-work-order-asset">Activo</label>
+
+      <select
+        #assetFilter
+        id="filter-work-order-asset"
+        [value]="selectedAssetId()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="changeFilter('asset', assetFilter.value)"
+      >
+        <option value="">Todos los activos</option>
+
+        @for (asset of filterAssets(); track asset.id) {
+          <option [value]="asset.id">
+            {{ asset.code }} — {{ asset.name }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-work-order-incident">Incidencia</label>
+
+      <select
+        #incidentFilter
+        id="filter-work-order-incident"
+        [value]="selectedIncidentId()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="changeFilter('incident', incidentFilter.value)"
+      >
+        <option value="">Todas las incidencias</option>
+
+        @for (incident of filterIncidents(); track incident.id) {
+          <option [value]="incident.id">
+            {{ incident.title }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-work-order-technician">Técnico</label>
+
+      <select
+        #technicianFilter
+        id="filter-work-order-technician"
+        [value]="selectedTechnicianId()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="changeFilter('technician', technicianFilter.value)"
+      >
+        <option value="">Todos los técnicos</option>
+
+        @for (technician of technicians(); track technician.id) {
+          <option [value]="technician.id">
+            {{ technician.code }} — {{ technician.name }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-work-order-status">Estado</label>
+
+      <select
+        #statusFilter
+        id="filter-work-order-status"
+        [value]="selectedStatus()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="changeFilter('status', statusFilter.value)"
+      >
+        <option value="">Todos los estados</option>
+
+        @for (status of statuses; track status.value) {
+          <option [value]="status.value">
+            {{ status.label }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="filter-work-order-priority">Prioridad</label>
+
+      <select
+        #priorityFilter
+        id="filter-work-order-priority"
+        [value]="selectedPriority()"
+        [disabled]="isLoading() || isBusy()"
+        (change)="changeFilter('priority', priorityFilter.value)"
+      >
+        <option value="">Todas las prioridades</option>
+
+        @for (priority of priorities; track priority.value) {
+          <option [value]="priority.value">
+            {{ priority.label }}
+          </option>
+        }
+      </select>
+    </div>
+  </section>
+
+  @if (isLoading()) {
+    <p class="message" role="status">
+      Cargando órdenes de trabajo...
+    </p>
+  } @else if (errorMessage(); as error) {
+    <div class="message error" role="alert">
+      <p>{{ error }}</p>
+
+      <button
+        type="button"
+        (click)="loadOrders()"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else if (orders().length === 0) {
+    <p class="message">
+      No hay órdenes que coincidan con los filtros seleccionados.
+    </p>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Orden</th>
+            <th scope="col">Instalación</th>
+            <th scope="col">Activo / incidencia</th>
+            <th scope="col">Técnico</th>
+            <th scope="col">Prioridad</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Planificación</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (order of orders(); track order.id) {
+            <tr>
+              <td>
+                <strong>{{ order.code }}</strong>
+
+                <span class="order-title">
+                  {{ order.title }}
+                </span>
+
+                @if (order.description) {
+                  <span class="description">
+                    {{ order.description }}
+                  </span>
+                }
+              </td>
+
+              <td>
+                {{
+                  facilityNames().get(order.facilityId)
+                    ?? 'Instalación no disponible'
+                }}
+              </td>
+
+              <td>
+                <span class="related-item">
+                  @if (order.assetId) {
+                    {{
+                      assetNames().get(order.assetId)
+                        ?? 'Activo no disponible'
+                    }}
+                  } @else {
+                    Sin activo
+                  }
+                </span>
+
+                <span class="description">
+                  @if (order.incidentId) {
+                    Incidencia:
+                    {{
+                      incidentNames().get(order.incidentId)
+                        ?? 'No disponible'
+                    }}
+                  } @else {
+                    Sin incidencia
+                  }
+                </span>
+              </td>
+
+              <td>
+                @if (order.technicianId) {
+                  {{
+                    technicianNames().get(order.technicianId)
+                      ?? 'Técnico no disponible'
+                  }}
+                } @else {
+                  Sin asignar
+                }
+              </td>
+
+              <td>
+                <span
+                  class="priority"
+                  [class.high]="order.priority === 3"
+                  [class.critical]="order.priority === 4"
+                >
+                  {{ getPriorityLabel(order.priority) }}
+                </span>
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [class.in-progress]="order.status === statusEnum.InProgress"
+                  [class.completed]="order.status === statusEnum.Completed"
+                  [class.cancelled]="order.status === statusEnum.Cancelled"
+                >
+                  {{ getStatusLabel(order.status) }}
+                </span>
+              </td>
+
+              <td class="dates-cell">
+                <span>
+                  Inicio:
+                  @if (order.scheduledStartUtc) {
+                    {{ order.scheduledStartUtc | date:'dd/MM/yyyy HH:mm' }}
+                  } @else {
+                    Sin fecha
+                  }
+                </span>
+
+                <span>
+                  Límite:
+                  @if (order.dueAtUtc) {
+                    {{ order.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                  } @else {
+                    Sin fecha
+                  }
+                </span>
+              </td>
+
+              <td>
+                <div class="row-actions">
+                  @if (canEdit(order)) {
+                    <button
+                      type="button"
+                      class="edit-button"
+                      [disabled]="isLoading() || isBusy()"
+                      [attr.aria-label]="'Editar orden ' + order.code"
+                      (click)="editOrder(order)"
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      type="button"
+                      class="assign-button"
+                      [disabled]="isLoading() || isBusy()"
+                      [attr.aria-label]="'Asignar técnico a ' + order.code"
+                      (click)="requestAssignment(order)"
+                    >
+                      Asignar
+                    </button>
+                  }
+
+                  @for (action of getAvailableActions(order); track action) {
+                    <button
+                      type="button"
+                      class="status-button"
+                      [class.cancel-action]="action === 'cancel'"
+                      [disabled]="isLoading() || isBusy()"
+                      [attr.aria-label]="getActionLabel(action) + ' orden ' + order.code"
+                      (click)="requestStatus(order, action)"
+                    >
+                      {{ getActionLabel(action) }}
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

@@ -2,6 +2,7 @@ using FieldOps.Application.Assets;
 using FieldOps.Application.Incidents;
 using FieldOps.Application.Facilities;
 using FieldOps.Application.Technicians;
+using FieldOps.Application.WorkOrders;
 using FieldOps.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,7 @@ builder.Services.AddScoped<IFacilityService, FacilityService>();
 builder.Services.AddScoped<IAssetService, AssetService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+builder.Services.AddScoped<IWorkOrderService, WorkOrderService>();
 
 var app = builder.Build();
 

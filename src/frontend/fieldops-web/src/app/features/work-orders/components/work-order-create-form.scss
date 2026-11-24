@@ -1,0 +1,118 @@
+.work-order-form {
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #17253d;
+
+  h2 {
+    margin: 0 0 1.5rem;
+    font-size: 1.25rem;
+  }
+}
+
+form,
+fieldset {
+  display: grid;
+  gap: 1.2rem;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+
+  label {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #17253d;
+    font: inherit;
+
+    &:focus {
+      outline: 2px solid #2563eb;
+      outline-offset: 1px;
+    }
+
+    &:disabled {
+      opacity: 0.65;
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.field-error,
+.field-hint {
+  font-size: 0.8rem;
+}
+
+.field-error {
+  color: #dc2626;
+}
+
+.field-hint {
+  color: #64748b;
+}
+
+.form-note,
+.save-error {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.form-note {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.save-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+button[type="submit"] {
+  padding: 0.85rem 1.25rem;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 2px;
+  }
+}

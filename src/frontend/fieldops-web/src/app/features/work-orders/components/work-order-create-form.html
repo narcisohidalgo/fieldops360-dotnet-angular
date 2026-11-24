@@ -1,0 +1,197 @@
+<section class="work-order-form">
+  <h2>Nueva orden de trabajo</h2>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+    <fieldset [disabled]="isSaving()">
+      <div class="form-field">
+        <label for="work-order-facility">Instalación *</label>
+
+        <select id="work-order-facility" formControlName="facilityId">
+          <option value="">Selecciona una instalación</option>
+
+          @for (facility of facilities(); track facility.id) {
+            <option [value]="facility.id">
+              {{ facility.code }} — {{ facility.name }}
+              {{ facility.isActive ? '' : '(Inactiva)' }}
+            </option>
+          }
+        </select>
+
+        @if (form.controls.facilityId.touched && form.controls.facilityId.invalid) {
+          <small class="field-error">Selecciona una instalación.</small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-asset">Activo (opcional)</label>
+
+        <select id="work-order-asset" formControlName="assetId">
+          <option value="">Sin activo asociado</option>
+
+          @for (asset of assetsForFacility(); track asset.id) {
+            <option [value]="asset.id">
+              {{ asset.code }} — {{ asset.name }}
+              {{ asset.isActive ? '' : '(Inactivo)' }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-incident">Incidencia (opcional)</label>
+
+        <select id="work-order-incident" formControlName="incidentId">
+          <option value="">Sin incidencia asociada</option>
+
+          @for (incident of incidentsForSelection(); track incident.id) {
+            <option [value]="incident.id">
+              {{ incident.title }}
+            </option>
+          }
+        </select>
+
+        <small class="field-hint">
+          Solo aparecen incidencias compatibles con la instalación y el activo.
+        </small>
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-technician">Técnico (opcional)</label>
+
+        <select id="work-order-technician" formControlName="technicianId">
+          <option value="">Sin asignar</option>
+
+          @for (technician of activeTechnicians(); track technician.id) {
+            <option [value]="technician.id">
+              {{ technician.code }} — {{ technician.name }}
+            </option>
+          }
+        </select>
+
+        <small class="field-hint">
+          Es obligatorio asignar un técnico activo antes de iniciar la orden.
+        </small>
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-code">Código *</label>
+
+        <input
+          id="work-order-code"
+          type="text"
+          formControlName="code"
+          maxlength="30"
+          autocomplete="off"
+          placeholder="Ej.: WO-2026-001"
+        />
+
+        @if (form.controls.code.touched && form.controls.code.invalid) {
+          <small class="field-error">
+            Introduce un código válido de hasta 30 caracteres.
+          </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-title">Título *</label>
+
+        <input
+          id="work-order-title"
+          type="text"
+          formControlName="title"
+          maxlength="150"
+          placeholder="Ej.: Revisar sistema eléctrico"
+        />
+
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <small class="field-error">
+            Introduce un título válido de hasta 150 caracteres.
+          </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-description">Descripción</label>
+
+        <textarea
+          id="work-order-description"
+          formControlName="description"
+          maxlength="2000"
+          rows="4"
+          placeholder="Describe la intervención"
+        ></textarea>
+
+        @if (form.controls.description.touched && form.controls.description.invalid) {
+          <small class="field-error">
+            Máximo 2000 caracteres.
+          </small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-priority">Prioridad *</label>
+
+        <select id="work-order-priority" formControlName="priority">
+          @for (priority of priorities; track priority.value) {
+            <option [value]="priority.value">
+              {{ priority.label }}
+            </option>
+          }
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-start-date">
+          Inicio previsto (opcional)
+        </label>
+
+        <input
+          id="work-order-start-date"
+          type="datetime-local"
+          formControlName="scheduledStartLocal"
+        />
+
+        @if (form.controls.scheduledStartLocal.touched && form.controls.scheduledStartLocal.invalid) {
+          <small class="field-error">Fecha de inicio no válida.</small>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="work-order-due-date">
+          Fecha límite (opcional)
+        </label>
+
+        <input
+          id="work-order-due-date"
+          type="datetime-local"
+          formControlName="dueAtLocal"
+        />
+
+        @if (form.controls.dueAtLocal.touched && form.controls.dueAtLocal.invalid) {
+          <small class="field-error">Fecha límite no válida.</small>
+        }
+      </div>
+
+      @if (form.hasError('dueBeforeStart')) {
+        <p class="field-error" role="alert">
+          La fecha límite no puede ser anterior al inicio previsto.
+        </p>
+      }
+    </fieldset>
+
+    <p class="form-note">
+      La orden se creará como Planificada. Las fechas se guardarán en UTC.
+    </p>
+
+    @if (saveError(); as error) {
+      <p class="save-error" role="alert">{{ error }}</p>
+    }
+
+    <button
+      type="submit"
+      [disabled]="isSaving() || facilities().length === 0"
+    >
+      {{ isSaving() ? 'Guardando...' : 'Crear orden de trabajo' }}
+    </button>
+  </form>
+</section>
