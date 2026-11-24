@@ -7,6 +7,9 @@ The authoritative database schema is managed through **Entity Framework Core mig
 - `20261120060431_InitialCreate` — creates `Facilities` and `Assets`, relationships and uniqueness constraints.
 - `20261123130353_AddIncidents` — adds `Incidents`, with mandatory `FacilityId`, optional `AssetId`, priority/status fields, UTC timestamps and indices.
 - `20261123163133_AddIncidentRowVersion` — adds the SQL Server `rowversion` concurrency token to `Incidents`, allowing EF Core to detect conflicting concurrent updates.
+- `20261124045123_AddTechnicians` — creates `Technicians`, with a GUID primary key, required code/name/email, optional phone/specialty, active status and a unique index on `Code`.
+
+Technicians are currently independent of Facilities, Assets and Incidents. Technician codes cannot be changed through the update operation. Incident concurrency handling remains unchanged.
 
 `InitialCreate.sql` is a historical snapshot **only of the initial migration**. Do not treat it as an up-to-date full-schema export. On a new database, prefer applying all EF Core migrations.
 

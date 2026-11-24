@@ -30,6 +30,13 @@ export const routes: Routes = [
         .then(m => m.IncidentsPage)
   },
   {
+    path: 'technicians',
+    title: 'Técnicos | FieldOps 360',
+    loadComponent: () =>
+      import('./features/technicians/pages/technicians-page')
+        .then(m => m.TechniciansPage)
+  },
+  {
     path: '**',
     redirectTo: ''
   }

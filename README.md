@@ -2,9 +2,9 @@
 
 **Enterprise Operations & Maintenance Management Platform**
 
-FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment and operational incidents. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
+FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents and technicians. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Facilities, Assets and Incidents are implemented for local development and demonstration. Authentication, authorization, deployment hardening and other modules remain future work.
+> **Project status:** Facilities, Assets, Incidents and Technicians are implemented for local development and demonstration. Authentication, authorization, deployment hardening and other modules remain future work.
 
 ## Technology stack
 
@@ -41,6 +41,16 @@ FieldOps 360 is a full-stack portfolio project for managing facilities, their eq
 - Use Angular forms, filter selectors, confirmation dialogs/panels, feedback messages and error handling.
 
 Incident priorities: `Low` (1), `Medium` (2), `High` (3), `Critical` (4). Statuses: `Open` (1), `InProgress` (2), `Resolved` (3), `Closed` (4).
+
+### Technicians
+
+- List technicians and retrieve their details.
+- Create technicians with unique codes, required names and validated email addresses.
+- Store optional phone numbers and specialties.
+- Update technician details without changing their codes.
+- Activate and deactivate technicians without deleting their records.
+- Manage technicians through Angular reactive forms, confirmation panels and error handling.
+- Technician assignment to work orders remains future work.
 
 ### Optimistic concurrency
 
@@ -81,6 +91,12 @@ The frontend uses feature-based folders under `src/app/features/`, Angular `Http
 | PATCH | `/api/incidents/{id}/resolve` | InProgress → Resolved |
 | PATCH | `/api/incidents/{id}/close` | Resolved → Closed |
 | PATCH | `/api/incidents/{id}/reopen` | Resolved/Closed → Open |
+| GET | `/api/technicians` | List technicians |
+| GET | `/api/technicians/{id}` | Retrieve a technician |
+| POST | `/api/technicians` | Create a technician |
+| PUT | `/api/technicians/{id}` | Update technician details |
+| PATCH | `/api/technicians/{id}/activate` | Activate a technician |
+| PATCH | `/api/technicians/{id}/deactivate` | Deactivate a technician |
 
 The Facilities and Assets controllers also provide their own create, update and activation/deactivation operations.
 
@@ -110,7 +126,7 @@ Run from the repository root:
 dotnet ef database update --project src/backend/FieldOps.Infrastructure/FieldOps.Infrastructure.csproj --startup-project src/backend/FieldOps.Api/FieldOps.Api.csproj --context FieldOpsDbContext
 ```
 
-This applies all available migrations, including `InitialCreate`, `AddIncidents` and `AddIncidentRowVersion`, as needed. The file `docs/database/InitialCreate.sql` represents **only the initial schema**, not the complete current schema; see [Database documentation](docs/database/README.md).
+This applies all available migrations, including `InitialCreate`, `AddIncidents`, `AddIncidentRowVersion` and `AddTechnicians`, as needed. The file `docs/database/InitialCreate.sql` represents **only the initial schema**, not the complete current schema; see [Database documentation](docs/database/README.md).
 
 ### 3. Start the backend
 
@@ -125,9 +141,11 @@ In a second terminal:
 
 ```powershell
 Set-Location src/frontend/fieldops-web
-npm ci
-npm start
+npm.cmd ci
+npm.cmd start
 ```
+
+On Windows PowerShell, use `npm.cmd` to avoid restrictions affecting `npm.ps1`. On macOS/Linux, use `npm`.
 
 Angular runs at `http://localhost:4200` and forwards `/api/**` requests to the backend at port `5080` via the development proxy.
 
@@ -137,6 +155,7 @@ Angular runs at `http://localhost:4200` and forwards `/api/**` requests to the b
 - `http://localhost:4200/facilities` — Facilities
 - `http://localhost:4200/assets` — Assets
 - `http://localhost:4200/incidents` — Incidents
+- `http://localhost:4200/technicians` — Technicians
 
 ## Tests
 
@@ -149,15 +168,14 @@ dotnet test src/backend/FieldOps.slnx
 From `src/frontend/fieldops-web`:
 
 ```powershell
-npm test -- --watch=false
-npm run build
+npm.cmd test -- --watch=false
+npm.cmd run build
 ```
 
-At the end of Phase 7 local testing (23 November 2026), the project passed **115 xUnit tests** and **175 Angular/Vitest tests**, as well as manual REST API and end-to-end browser checks against a local SQL Server database.
+At completion of Phase 8 local validation (24 November 2026), the project passed **155 xUnit tests** and **234 Angular/Vitest tests**, with successful .NET Release and Angular production builds. Technician REST operations passed 15 functional HTTP checks; technician creation, editing, activation and deactivation were also verified in the browser against local SQL Server.
 
 ## Roadmap
 
-- Technician management.
 - Work orders.
 - Automated integration/end-to-end tests, including database and API paths.
 - Authentication and authorization, plus deployment hardening.

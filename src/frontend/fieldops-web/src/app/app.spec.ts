@@ -20,6 +20,16 @@ describe('App', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
+  it('should register the technicians lazy-loaded route', () => {
+    const route = routes.find(
+      route => route.path === 'technicians'
+    );
+
+    expect(route).toBeDefined();
+    expect(route?.title).toBe('Técnicos | FieldOps 360');
+    expect(typeof route?.loadComponent).toBe('function');
+  });
+
   it('should display navigation links', () => {
     const fixture = TestBed.createComponent(App);
 
@@ -31,11 +41,12 @@ describe('App', () => {
       '.primary-nav a'
     );
 
-    expect(links.length).toBe(4);
+    expect(links.length).toBe(5);
     expect(links[0].getAttribute('href')).toBe('/');
     expect(links[1].getAttribute('href')).toBe('/facilities');
     expect(links[2].getAttribute('href')).toBe('/assets');
     expect(links[3].getAttribute('href')).toBe('/incidents');
+    expect(links[4].getAttribute('href')).toBe('/technicians');
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });

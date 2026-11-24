@@ -1,0 +1,219 @@
+<section class="technicians-page">
+  <header class="page-header">
+    <div>
+      <h1>Gestión de técnicos</h1>
+      <p>Consulta y administra los técnicos de FieldOps 360.</p>
+    </div>
+
+    <button
+      type="button"
+      class="create-button"
+      [attr.aria-expanded]="showCreateForm()"
+      aria-controls="technician-create-panel"
+      [disabled]="pendingAction() !== null || isUpdatingStatus() || isFormSaving()"
+      (click)="toggleCreateForm()"
+    >
+      {{ showCreateForm() ? 'Cancelar' : '+ Nuevo técnico' }}
+    </button>
+  </header>
+
+  @if (showCreateForm()) {
+    <div id="technician-create-panel" class="create-panel">
+      <app-technician-create-form
+        (created)="onTechnicianCreated($event)"
+      />
+    </div>
+  }
+
+  @if (selectedTechnician(); as technician) {
+    <div class="edit-panel">
+      <app-technician-edit-form
+        [technician]="technician"
+        (saved)="onTechnicianUpdated()"
+        (cancelled)="cancelEdit()"
+      />
+    </div>
+  }
+
+  @if (pendingTechnician(); as technician) {
+    @if (pendingAction(); as action) {
+      <section
+        [class.activation-panel]="action === 'activate'"
+        [class.deactivation-panel]="action === 'deactivate'"
+        role="group"
+        aria-labelledby="technician-status-title"
+      >
+        <h2 id="technician-status-title">
+          {{ action === 'activate'
+            ? 'Confirmar activación'
+            : 'Confirmar desactivación' }}
+        </h2>
+
+        <p>
+          ¿Quieres
+          {{ action === 'activate' ? 'activar' : 'desactivar' }}
+          al técnico
+          <strong>{{ technician.code }} — {{ technician.name }}</strong>?
+        </p>
+
+        <p
+          [class.activation-note]="action === 'activate'"
+          [class.deactivation-note]="action === 'deactivate'"
+        >
+          @if (action === 'activate') {
+            El técnico volverá a estar activo y sus datos se conservarán.
+          } @else {
+            El técnico no se eliminará de la base de datos.
+            Permanecerá registrado como inactivo.
+          }
+        </p>
+
+        @if (statusError(); as error) {
+          <p
+            class="status-error"
+            [class.activation-error]="action === 'activate'"
+            [class.deactivation-error]="action === 'deactivate'"
+            role="alert"
+          >
+            {{ error }}
+          </p>
+
+          <button
+            type="button"
+            class="refresh-status"
+            [disabled]="isUpdatingStatus()"
+            (click)="refreshAfterStatusError()"
+          >
+            Actualizar listado
+          </button>
+        }
+
+        <div
+          [class.activation-actions]="action === 'activate'"
+          [class.deactivation-actions]="action === 'deactivate'"
+        >
+          <button
+            type="button"
+            class="cancel-status"
+            [class.cancel-activation]="action === 'activate'"
+            [class.cancel-action]="action === 'deactivate'"
+            [disabled]="isUpdatingStatus()"
+            (click)="cancelStatus()"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            class="confirm-status"
+            [class.confirm-activation]="action === 'activate'"
+            [class.confirm-deactivation]="action === 'deactivate'"
+            [disabled]="isUpdatingStatus()"
+            (click)="confirmStatus()"
+          >
+            @if (isUpdatingStatus()) {
+              {{ action === 'activate' ? 'Activando...' : 'Desactivando...' }}
+            } @else {
+              {{ action === 'activate'
+                ? 'Confirmar activación'
+                : 'Confirmar desactivación' }}
+            }
+          </button>
+        </div>
+      </section>
+    }
+  }
+
+  @if (successMessage(); as message) {
+    <p class="success-message" role="status">
+      {{ message }}
+    </p>
+  }
+
+  @if (isLoading()) {
+    <p class="message" role="status">
+      Cargando técnicos...
+    </p>
+  } @else if (errorMessage(); as error) {
+    <div class="message error" role="alert">
+      <p>{{ error }}</p>
+      <button type="button" (click)="loadTechnicians()">
+        Reintentar
+      </button>
+    </div>
+  } @else if (technicians().length === 0) {
+    <p class="message">
+      Todavía no hay técnicos registrados.
+    </p>
+  } @else {
+    <div class="table-container">
+      <table aria-label="Listado de técnicos">
+        <thead>
+          <tr>
+            <th scope="col">Código</th>
+            <th scope="col">Nombre</th>
+            <th scope="col">Correo electrónico</th>
+            <th scope="col">Teléfono</th>
+            <th scope="col">Especialidad</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (technician of technicians(); track technician.id) {
+            <tr>
+              <td>{{ technician.code }}</td>
+              <td>{{ technician.name }}</td>
+              <td>{{ technician.email }}</td>
+              <td>{{ technician.phone ?? 'Sin teléfono' }}</td>
+              <td>{{ technician.specialty ?? 'Sin especialidad' }}</td>
+
+              <td>
+                <span [class.inactive]="!technician.isActive">
+                  {{ technician.isActive ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+
+              <td>
+                <div class="row-actions">
+                  <button
+                    type="button"
+                    class="edit-button"
+                    [disabled]="pendingAction() !== null || isUpdatingStatus() || isFormSaving()"
+                    [attr.aria-label]="'Editar técnico ' + technician.code"
+                    (click)="editTechnician(technician)"
+                  >
+                    Editar
+                  </button>
+
+                  @if (technician.isActive) {
+                    <button
+                      type="button"
+                      class="deactivate-button"
+                      [disabled]="pendingAction() !== null || isUpdatingStatus() || isFormSaving()"
+                      [attr.aria-label]="'Desactivar técnico ' + technician.code"
+                      (click)="requestStatus(technician, 'deactivate')"
+                    >
+                      Desactivar
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="activate-button"
+                      [disabled]="pendingAction() !== null || isUpdatingStatus() || isFormSaving()"
+                      [attr.aria-label]="'Activar técnico ' + technician.code"
+                      (click)="requestStatus(technician, 'activate')"
+                    >
+                      Activar
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
