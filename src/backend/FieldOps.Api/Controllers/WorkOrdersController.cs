@@ -1,9 +1,13 @@
+using FieldOps.Api.Security;
+using Microsoft.AspNetCore.Authorization;
 using FieldOps.Application.WorkOrders;
 using FieldOps.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FieldOps.Api.Controllers;
 
+[Authorize(Policy = FieldOpsPolicies.ReadWorkOrders)]
+[AutoValidateAntiforgeryToken]
 [ApiController]
 [Route("api/work-orders")]
 public sealed class WorkOrdersController : ControllerBase
@@ -66,6 +70,7 @@ public sealed class WorkOrdersController : ControllerBase
     }
 
     // POST /api/work-orders
+    [Authorize(Policy = FieldOpsPolicies.ManageWorkOrders)]
     [HttpPost]
     public async Task<ActionResult<WorkOrderDto>> Create(
         [FromBody] CreateWorkOrderCommand command,
@@ -106,6 +111,7 @@ public sealed class WorkOrdersController : ControllerBase
     }
 
     // PUT /api/work-orders/{id}
+    [Authorize(Policy = FieldOpsPolicies.ManageWorkOrders)]
     [HttpPut("{id:guid}")]
     public Task<IActionResult> Update(
         Guid id,
@@ -120,6 +126,7 @@ public sealed class WorkOrdersController : ControllerBase
     // PATCH /api/work-orders/{id}/assign-technician
     // Body: { "technicianId": "guid" }
     // Body: { "technicianId": null } to unassign.
+    [Authorize(Policy = FieldOpsPolicies.ManageWorkOrders)]
     [HttpPatch("{id:guid}/assign-technician")]
     public Task<IActionResult> AssignTechnician(
         Guid id,
@@ -134,6 +141,7 @@ public sealed class WorkOrdersController : ControllerBase
     }
 
     // PATCH /api/work-orders/{id}/start
+    [Authorize(Policy = FieldOpsPolicies.ManageWorkOrders)]
     [HttpPatch("{id:guid}/start")]
     public Task<IActionResult> Start(
         Guid id,
@@ -144,6 +152,7 @@ public sealed class WorkOrdersController : ControllerBase
     }
 
     // PATCH /api/work-orders/{id}/complete
+    [Authorize(Policy = FieldOpsPolicies.ManageWorkOrders)]
     [HttpPatch("{id:guid}/complete")]
     public Task<IActionResult> Complete(
         Guid id,
@@ -156,6 +165,7 @@ public sealed class WorkOrdersController : ControllerBase
 
     // PATCH /api/work-orders/{id}/cancel
     // Body: { "reason": "Cancellation reason" }
+    [Authorize(Policy = FieldOpsPolicies.ManageWorkOrders)]
     [HttpPatch("{id:guid}/cancel")]
     public Task<IActionResult> Cancel(
         Guid id,

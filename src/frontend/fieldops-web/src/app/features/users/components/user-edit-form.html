@@ -1,0 +1,162 @@
+<section class="user-form">
+  <h2>Editar usuario</h2>
+
+  <p class="intro">
+    Modifica los datos y permisos de acceso.
+    Los cambios de rol pueden invalidar la sesión anterior.
+  </p>
+
+  <form
+    [formGroup]="form"
+    (ngSubmit)="submit()"
+    novalidate
+  >
+    <div class="form-field">
+      <label for="user-edit-email">
+        Correo electrónico
+      </label>
+
+      <input
+        id="user-edit-email"
+        type="email"
+        [value]="user().email"
+        readonly
+        aria-readonly="true"
+      />
+
+      <p class="field-hint">
+        El correo identificativo no se puede cambiar.
+      </p>
+    </div>
+
+    <div class="form-field">
+      <label for="user-edit-name">Nombre *</label>
+
+      <input
+        id="user-edit-name"
+        type="text"
+        formControlName="displayName"
+        maxlength="150"
+        autocomplete="name"
+      />
+
+      @if (form.controls.displayName.touched &&
+           form.controls.displayName.invalid) {
+        <small class="field-error">
+          Introduce un nombre de 2 a 150 caracteres.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="user-edit-role">Rol *</label>
+
+      <select
+        id="user-edit-role"
+        formControlName="role"
+      >
+        @for (role of roles; track role) {
+          <option [value]="role">
+            {{ role }}
+          </option>
+        }
+      </select>
+    </div>
+
+    @if (selectedRole() === 'Technician') {
+      <div class="form-field">
+        <label for="user-edit-technician">
+          Técnico vinculado *
+        </label>
+
+        @if (loadingTechnicians()) {
+          <p class="field-hint" role="status">
+            Consultando técnicos disponibles...
+          </p>
+        } @else if (technicianError(); as error) {
+          <p class="field-error" role="alert">
+            {{ error }}
+          </p>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="loadTechnicians()"
+          >
+            Reintentar
+          </button>
+        } @else {
+          <select
+            id="user-edit-technician"
+            formControlName="technicianId"
+          >
+            <option value="">Selecciona un técnico</option>
+
+            @if (unavailableLinkedTechnician(); as linked) {
+              <option [value]="linked.id" disabled>
+                {{ linked.label }}
+              </option>
+            }
+
+            @for (
+              technician of availableTechnicians();
+              track technician.id
+            ) {
+              <option [value]="technician.id">
+                {{ technician.code }} — {{ technician.name }}
+              </option>
+            }
+          </select>
+
+          @if (unavailableLinkedTechnician()) {
+            <p class="field-hint" role="status">
+              La ficha técnica vinculada está inactiva o no
+              disponible. Para guardar una vinculación válida,
+              activa su ficha o selecciona otro técnico activo.
+            </p>
+          }
+          @if (availableTechnicians().length === 0) {
+            <p class="field-hint">
+              No hay técnicos activos disponibles.
+            </p>
+          }
+        }
+      </div>
+    }
+
+    @if (saveError(); as error) {
+      <p class="save-error" role="alert">
+        {{ error }}
+      </p>
+    }
+
+    <div class="form-actions">
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="isSaving()"
+        (click)="cancel()"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="submit"
+        class="primary-button"
+        [disabled]="
+          isSaving() ||
+          (
+            selectedRole() === 'Technician' &&
+            (
+              loadingTechnicians() ||
+              technicianError() !== null ||
+              availableTechnicians().length === 0
+            )
+          )
+        "
+      >
+        {{ isSaving() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </form>
+</section>

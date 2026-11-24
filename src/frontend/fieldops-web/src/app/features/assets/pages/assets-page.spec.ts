@@ -4,6 +4,7 @@ import {
   provideHttpClientTesting
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { AuthService } from '../../../core/services/auth.service';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -13,6 +14,7 @@ import { AssetsPage } from './assets-page';
 
 describe('AssetsPage', () => {
   let httpMock: HttpTestingController;
+  let grantedRoles: Set<string>;
 
   const facilityId = '00000000-0000-0000-0000-000000000001';
   const assetId = '00000000-0000-0000-0000-000000000002';
@@ -36,11 +38,19 @@ describe('AssetsPage', () => {
   };
 
   beforeEach(() => {
+    grantedRoles = new Set(['Administrator']);
+
     TestBed.configureTestingModule({
       imports: [AssetsPage],
       providers: [
         provideHttpClient(),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: {
+            hasRole: (role: string) => grantedRoles.has(role)
+          }
+        }
       ]
     });
 
@@ -299,5 +309,24 @@ describe('AssetsPage', () => {
 
     expect(element.querySelector('.create-panel')).toBeNull();
     expect(element.querySelector('.status-panel')).toBeNull();
+  });
+  it('should display assets as read-only for Technician', () => {
+    grantedRoles = new Set(['Technician']);
+
+    const fixture = TestBed.createComponent(AssetsPage);
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/assets').flush([asset]);
+    httpMock.expectOne('/api/facilities').flush([facility]);
+
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelectorAll('tbody tr').length).toBe(1);
+    expect(element.querySelector('.create-button')).toBeNull();
+    expect(element.querySelector('.edit-button')).toBeNull();
+    expect(element.querySelector('.status-button')).toBeNull();
+    expect(element.textContent).toContain('Modo consulta');
   });
 });

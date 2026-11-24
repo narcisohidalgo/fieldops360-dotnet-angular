@@ -1,0 +1,177 @@
+<section class="user-form">
+  <h2>Nuevo usuario</h2>
+
+  <p class="intro">
+    Crea una cuenta y asigna sus permisos de acceso.
+  </p>
+
+  <form
+    [formGroup]="form"
+    (ngSubmit)="submit()"
+    novalidate
+  >
+    <div class="form-field">
+      <label for="user-create-name">Nombre *</label>
+
+      <input
+        id="user-create-name"
+        type="text"
+        formControlName="displayName"
+        maxlength="150"
+        autocomplete="name"
+      />
+
+      @if (form.controls.displayName.touched &&
+           form.controls.displayName.invalid) {
+        <small class="field-error">
+          Introduce un nombre de 2 a 150 caracteres.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="user-create-email">
+        Correo electrónico *
+      </label>
+
+      <input
+        id="user-create-email"
+        type="email"
+        formControlName="email"
+        maxlength="256"
+        autocomplete="off"
+      />
+
+      @if (form.controls.email.touched &&
+           form.controls.email.invalid) {
+        <small class="field-error">
+          Introduce un correo electrónico válido.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="user-create-password">
+        Contraseña inicial *
+      </label>
+
+      <input
+        id="user-create-password"
+        type="password"
+        formControlName="password"
+        autocomplete="new-password"
+        maxlength="1024"
+      />
+
+      <p class="field-hint">
+        Mínimo 12 caracteres, con mayúsculas,
+        minúsculas, números y símbolos.
+      </p>
+
+      @if (form.controls.password.touched &&
+           form.controls.password.invalid) {
+        <small class="field-error">
+          La contraseña no cumple los requisitos.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="user-create-role">Rol *</label>
+
+      <select
+        id="user-create-role"
+        formControlName="role"
+      >
+        @for (role of roles; track role) {
+          <option [value]="role">
+            {{ role }}
+          </option>
+        }
+      </select>
+    </div>
+
+    @if (selectedRole() === 'Technician') {
+      <div class="form-field">
+        <label for="user-create-technician">
+          Técnico vinculado *
+        </label>
+
+        @if (loadingTechnicians()) {
+          <p class="field-hint" role="status">
+            Consultando técnicos disponibles...
+          </p>
+        } @else if (technicianError(); as error) {
+          <p class="field-error" role="alert">
+            {{ error }}
+          </p>
+
+          <button
+            class="retry-button"
+            type="button"
+            (click)="loadTechnicians()"
+          >
+            Reintentar
+          </button>
+        } @else {
+          <select
+            id="user-create-technician"
+            formControlName="technicianId"
+          >
+            <option value="">Selecciona un técnico</option>
+
+            @for (
+              technician of availableTechnicians();
+              track technician.id
+            ) {
+              <option [value]="technician.id">
+                {{ technician.code }} — {{ technician.name }}
+              </option>
+            }
+          </select>
+
+          @if (availableTechnicians().length === 0) {
+            <p class="field-hint">
+              No hay técnicos activos sin cuenta vinculada.
+            </p>
+          }
+        }
+      </div>
+    }
+
+    @if (saveError(); as error) {
+      <p class="save-error" role="alert">
+        {{ error }}
+      </p>
+    }
+
+    <div class="form-actions">
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="isSaving()"
+        (click)="cancel()"
+      >
+        Cancelar
+      </button>
+
+      <button
+        type="submit"
+        class="primary-button"
+        [disabled]="
+          isSaving() ||
+          (
+            selectedRole() === 'Technician' &&
+            (
+              loadingTechnicians() ||
+              technicianError() !== null ||
+              availableTechnicians().length === 0
+            )
+          )
+        "
+      >
+        {{ isSaving() ? 'Creando cuenta...' : 'Crear usuario' }}
+      </button>
+    </div>
+  </form>
+</section>

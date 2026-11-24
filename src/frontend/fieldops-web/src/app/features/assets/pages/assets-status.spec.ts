@@ -4,6 +4,7 @@ import {
   provideHttpClientTesting
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { AuthService } from '../../../core/services/auth.service';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -13,6 +14,7 @@ import { AssetsPage } from './assets-page';
 
 describe('AssetsPage - Asset status management', () => {
   let httpMock: HttpTestingController;
+  let grantedRoles: Set<string>;
 
   const facilityId = '00000000-0000-0000-0000-000000000001';
   const assetId = '00000000-0000-0000-0000-000000000002';
@@ -61,11 +63,19 @@ describe('AssetsPage - Asset status management', () => {
   ] as const;
 
   beforeEach(() => {
+    grantedRoles = new Set(['Administrator']);
+
     TestBed.configureTestingModule({
       imports: [AssetsPage],
       providers: [
         provideHttpClient(),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: {
+            hasRole: (role: string) => grantedRoles.has(role)
+          }
+        }
       ]
     });
 

@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   display: block;
   min-height: 100vh;
   background: #f4f7fb;
@@ -75,5 +75,83 @@
   .primary-nav {
     order: 3;
     width: 100%;
+  }
+}
+
+.account-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.account-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.account-name {
+  font-size: 14px;
+  color: #17253d;
+  font-weight: 700;
+}
+
+.account-role {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.logout-button {
+  padding: 0.7rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #f1f5f9;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 2px;
+  }
+}
+
+.session-loading {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.session-error {
+  max-width: 1200px;
+  margin: 1rem auto;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .account-actions {
+    margin-left: auto;
+  }
+
+  .account-user {
+    align-items: flex-start;
   }
 }

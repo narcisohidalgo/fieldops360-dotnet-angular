@@ -1,0 +1,80 @@
+<section class="login-page">
+  <div class="login-card">
+    <div class="login-heading">
+      <div class="brand-icon" aria-hidden="true">F</div>
+      <p class="eyebrow">ACCESO SEGURO</p>
+
+      <h1>Iniciar sesión</h1>
+
+      <p class="intro">
+        Accede a FieldOps 360 para gestionar tus operaciones.
+      </p>
+    </div>
+
+    <form
+      #loginForm="ngForm"
+      (ngSubmit)="submit()"
+      autocomplete="on"
+    >
+      <div class="field">
+        <label for="login-email">Correo electrónico</label>
+
+        <input
+          id="login-email"
+          name="email"
+          type="email"
+          [(ngModel)]="email"
+          autocomplete="username"
+          placeholder="correo@empresa.com"
+          maxlength="256"
+          required
+          email
+          [disabled]="isSubmitting()"
+        />
+      </div>
+
+      <div class="field">
+        <label for="login-password">Contraseña</label>
+
+        <input
+          id="login-password"
+          name="password"
+          type="password"
+          [(ngModel)]="password"
+          autocomplete="current-password"
+          placeholder="Introduce tu contraseña"
+          required
+          [disabled]="isSubmitting()"
+        />
+      </div>
+
+      @if (errorMessage(); as error) {
+        <p class="login-error" role="alert">
+          {{ error }}
+        </p>
+      }
+
+      <button
+        class="submit-button"
+        type="submit"
+        [disabled]="loginForm.invalid || isSubmitting()"
+      >
+        @if (isSubmitting()) {
+          Iniciando sesión...
+        } @else {
+          Acceder a FieldOps 360
+        }
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p>
+        Acceso exclusivo para usuarios autorizados.
+      </p>
+
+      <a routerLink="/">
+        Volver al inicio
+      </a>
+    </div>
+  </div>
+</section>

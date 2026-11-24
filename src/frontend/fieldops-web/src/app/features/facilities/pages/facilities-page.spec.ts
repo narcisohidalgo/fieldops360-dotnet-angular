@@ -4,6 +4,7 @@ import {
   provideHttpClientTesting
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { AuthService } from '../../../core/services/auth.service';
 import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -12,6 +13,7 @@ import { FacilitiesPage } from './facilities-page';
 
 describe('FacilitiesPage', () => {
   let httpMock: HttpTestingController;
+  let grantedRoles: Set<string>;
 
   const activeFacility: Facility = {
     id: '00000000-0000-0000-0000-000000000002',
@@ -32,11 +34,19 @@ describe('FacilitiesPage', () => {
   };
 
   beforeEach(() => {
+    grantedRoles = new Set(['Administrator']);
+
     TestBed.configureTestingModule({
       imports: [FacilitiesPage],
       providers: [
         provideHttpClient(),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        {
+          provide: AuthService,
+          useValue: {
+            hasRole: (role: string) => grantedRoles.has(role)
+          }
+        }
       ]
     });
 
@@ -960,4 +970,28 @@ describe('FacilitiesPage', () => {
       `/api/facilities/${activeFacility.id}/deactivate`
     );
   });
+  for (const role of ['Supervisor', 'Technician']) {
+    it(`should display facilities as read-only for ${role}`, () => {
+      grantedRoles = new Set([role]);
+
+      const fixture = TestBed.createComponent(FacilitiesPage);
+      fixture.detectChanges();
+
+      httpMock.expectOne('/api/facilities').flush([
+        inactiveFacility,
+        activeFacility
+      ]);
+
+      fixture.detectChanges();
+
+      const element = fixture.nativeElement as HTMLElement;
+
+      expect(element.querySelectorAll('tbody tr').length).toBe(2);
+      expect(element.querySelector('.create-button')).toBeNull();
+      expect(element.querySelector('.edit-button')).toBeNull();
+      expect(element.querySelector('.activate-button')).toBeNull();
+      expect(element.querySelector('.deactivate-button')).toBeNull();
+      expect(element.textContent).toContain('Modo consulta');
+    });
+  }
 });

@@ -1,0 +1,234 @@
+:host {
+  display: block;
+}
+
+.my-work-orders-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  color: #17253d;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+
+  h1 {
+    margin: 0 0 .5rem;
+  }
+
+  p:not(.eyebrow) {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.6;
+  }
+}
+
+.eyebrow {
+  margin: 0 0 .75rem;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.refresh-button,
+.primary-button,
+.secondary-button,
+.action-button {
+  padding: .75rem 1rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-button,
+.action-button {
+  border: 0;
+  background: #2563eb;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+}
+
+.refresh-button,
+.secondary-button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+
+button {
+  &:disabled {
+    cursor: not-allowed;
+    opacity: .6;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 2px;
+  }
+}
+
+.message,
+.success-message,
+.action-error {
+  padding: 1.2rem;
+  border-radius: 9px;
+}
+
+.message {
+  background: #f1f5f9;
+}
+
+.error,
+.action-error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.success-message {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.action-panel {
+  max-width: 720px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #fff;
+
+  h2 {
+    font-size: 1.25rem;
+    margin: 0 0 1rem;
+  }
+
+  p {
+    line-height: 1.6;
+  }
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: 1.5rem;
+}
+
+.table-container {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 1rem;
+  vertical-align: top;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+  background: #f8fafc;
+}
+
+.order-title,
+.description,
+.dates-cell span {
+  display: block;
+}
+
+.order-title {
+  margin-top: .35rem;
+  font-weight: 600;
+}
+
+.description,
+.dates-cell,
+.no-action {
+  color: #64748b;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+.description {
+  margin-top: .45rem;
+}
+
+.dates-cell {
+  white-space: nowrap;
+}
+
+.priority,
+.status {
+  display: inline-block;
+  padding: .3rem .65rem;
+  border-radius: 999px;
+  font-size: .85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.priority {
+  color: #1e40af;
+  background: #eff6ff;
+
+  &.high {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  &.critical {
+    color: #991b1b;
+    background: #fee2e2;
+  }
+}
+
+.status {
+  color: #1d4ed8;
+  background: #dbeafe;
+
+  &.in-progress {
+    color: #92400e;
+    background: #fef3c7;
+  }
+
+  &.completed {
+    color: #166534;
+    background: #dcfce7;
+  }
+
+  &.cancelled {
+    color: #475569;
+    background: #e2e8f0;
+  }
+}
+
+@media (max-width: 600px) {
+  .my-work-orders-page {
+    padding: 1rem;
+  }
+
+  .page-header {
+    align-items: flex-start;
+  }
+}

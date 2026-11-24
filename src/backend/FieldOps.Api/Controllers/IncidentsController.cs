@@ -1,9 +1,13 @@
+using FieldOps.Api.Security;
+using Microsoft.AspNetCore.Authorization;
 using FieldOps.Application.Incidents;
 using FieldOps.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FieldOps.Api.Controllers;
 
+[Authorize(Policy = FieldOpsPolicies.ReadIncidents)]
+[AutoValidateAntiforgeryToken]
 [ApiController]
 [Route("api/incidents")]
 public sealed class IncidentsController : ControllerBase
@@ -63,6 +67,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     // POST /api/incidents
+    [Authorize(Policy = FieldOpsPolicies.ManageIncidents)]
     [HttpPost]
     public async Task<ActionResult<IncidentDto>> Create(
         [FromBody] CreateIncidentCommand command,
@@ -110,6 +115,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     // PUT /api/incidents/{id}
+    [Authorize(Policy = FieldOpsPolicies.ManageIncidents)]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(
         Guid id,
@@ -154,6 +160,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     // PATCH /api/incidents/{id}/start
+    [Authorize(Policy = FieldOpsPolicies.ManageIncidents)]
     [HttpPatch("{id:guid}/start")]
     public Task<IActionResult> StartProgress(
         Guid id,
@@ -166,6 +173,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     // PATCH /api/incidents/{id}/resolve
+    [Authorize(Policy = FieldOpsPolicies.ManageIncidents)]
     [HttpPatch("{id:guid}/resolve")]
     public Task<IActionResult> Resolve(
         Guid id,
@@ -178,6 +186,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     // PATCH /api/incidents/{id}/close
+    [Authorize(Policy = FieldOpsPolicies.ManageIncidents)]
     [HttpPatch("{id:guid}/close")]
     public Task<IActionResult> Close(
         Guid id,
@@ -190,6 +199,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     // PATCH /api/incidents/{id}/reopen
+    [Authorize(Policy = FieldOpsPolicies.ManageIncidents)]
     [HttpPatch("{id:guid}/reopen")]
     public Task<IActionResult> Reopen(
         Guid id,

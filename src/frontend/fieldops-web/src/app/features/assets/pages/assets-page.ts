@@ -10,6 +10,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 
+import { AuthService } from '../../../core/services/auth.service';
 import { Asset } from '../models/asset.model';
 import { AssetCreateForm } from '../components/asset-create-form';
 import { AssetEditForm } from '../components/asset-edit-form';
@@ -49,6 +50,14 @@ export class AssetsPage implements OnInit {
     )
   );
 
+  private readonly auth = inject(AuthService);
+
+  protected readonly canManage = computed(
+    () =>
+      this.auth.hasRole('Administrator') ||
+      this.auth.hasRole('Supervisor')
+  );
+
   private readonly assetService = inject(AssetService);
   private readonly facilityService = inject(FacilityService);
   private readonly destroyRef = inject(DestroyRef);
@@ -58,6 +67,9 @@ export class AssetsPage implements OnInit {
   }
 
   protected toggleCreateForm(): void {
+    if (!this.canManage()) {
+      return;
+    }
     if (this.selectedAsset() || this.statusTarget() || this.isUpdatingStatus()) {
       return;
     }
@@ -66,6 +78,9 @@ export class AssetsPage implements OnInit {
   }
 
   protected onAssetCreated(asset: Asset): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.showCreateForm.set(false);
 
     this.successMessage.set(
@@ -76,6 +91,9 @@ export class AssetsPage implements OnInit {
   }
 
   protected editAsset(asset: Asset): void {
+    if (!this.canManage()) {
+      return;
+    }
     if (
       this.showCreateForm() ||
       this.selectedAsset() ||
@@ -95,6 +113,9 @@ export class AssetsPage implements OnInit {
   }
 
   protected onAssetUpdated(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const asset = this.selectedAsset();
 
     this.selectedAsset.set(null);
@@ -109,6 +130,9 @@ export class AssetsPage implements OnInit {
   }
 
   protected requestStatusChange(asset: Asset): void {
+    if (!this.canManage()) {
+      return;
+    }
     if (
       this.showCreateForm() ||
       this.isUpdatingStatus() ||
@@ -136,6 +160,9 @@ export class AssetsPage implements OnInit {
   }
 
   protected confirmStatusChange(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const asset = this.statusTarget();
 
     if (!asset || this.isUpdatingStatus()) {

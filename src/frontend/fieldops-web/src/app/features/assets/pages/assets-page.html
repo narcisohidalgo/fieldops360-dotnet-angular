@@ -7,6 +7,7 @@
         instalaciones de FieldOps 360.
       </p>
     </div>
+    @if (canManage()) {
     <button
       type="button"
       class="create-button"
@@ -17,9 +18,15 @@
     >
       {{ showCreateForm() ? 'Cancelar' : '+ Nuevo activo' }}
     </button>
+    }
   </header>
 
-  @if (showCreateForm()) {
+  @if (!canManage()) {
+    <p class="message" role="status">
+      Modo consulta: no tienes permisos para modificar activos.
+    </p>
+  }
+  @if (canManage() && showCreateForm()) {
     <div id="asset-create-panel" class="create-panel">
       <app-asset-create-form
         [facilities]="facilities()"
@@ -130,7 +137,9 @@
             <th scope="col">Descripción</th>
             <th scope="col">Instalación</th>
             <th scope="col">Estado</th>
-            <th scope="col">Acciones</th>
+            @if (canManage()) {
+              <th scope="col">Acciones</th>
+            }
           </tr>
         </thead>
 
@@ -160,6 +169,7 @@
                   {{ asset.isActive ? 'Activo' : 'Inactivo' }}
                 </span>
               </td>
+              @if (canManage()) {
               <td>
                 <div class="row-actions">
                   <button
@@ -185,6 +195,7 @@
                 </button>
                 </div>
               </td>
+              }
             </tr>
           }
         </tbody>

@@ -13,40 +13,92 @@
         Inicio
       </a>
 
-      <a
-        routerLink="/facilities"
-        routerLinkActive="active"
-      >
-        Instalaciones
-      </a>
-      <a
-        routerLink="/assets"
-        routerLinkActive="active"
-      >
-        Activos
-      </a>
-      <a
-        routerLink="/incidents"
-        routerLinkActive="active"
-      >
-        Incidencias
-      </a>
-      <a
-        routerLink="/technicians"
-        routerLinkActive="active"
-      >
-        Técnicos
-      </a>
-      <a
-        routerLink="/work-orders"
-        routerLinkActive="active"
-      >
-        Órdenes de trabajo
-      </a>
+      @if (!sessionChecking()) {
+        @if (auth.isAuthenticated()) {
+          @if (
+            auth.hasRole('Administrator') ||
+            auth.hasRole('Supervisor') ||
+            auth.hasRole('Technician')
+          ) {
+            <a routerLink="/facilities" routerLinkActive="active">
+              Instalaciones
+            </a>
+
+            <a routerLink="/assets" routerLinkActive="active">
+              Activos
+            </a>
+          }
+
+          @if (
+            auth.hasRole('Administrator') ||
+            auth.hasRole('Supervisor')
+          ) {
+            <a routerLink="/incidents" routerLinkActive="active">
+              Incidencias
+            </a>
+
+            <a routerLink="/technicians" routerLinkActive="active">
+              Técnicos
+            </a>
+
+            <a routerLink="/work-orders" routerLinkActive="active">
+              Órdenes de trabajo
+            </a>
+          }
+
+          @if (auth.hasRole('Administrator')) {
+            <a routerLink="/users" routerLinkActive="active">
+              Usuarios
+            </a>
+          }
+
+          @if (auth.hasRole('Technician')) {
+            <a routerLink="/my-work-orders" routerLinkActive="active">
+              Mis órdenes
+            </a>
+          }
+        } @else {
+          <a routerLink="/login" routerLinkActive="active">
+            Iniciar sesión
+          </a>
+        }
+      }
     </nav>
 
-    <span class="version">Angular 22 &middot; ASP.NET Core 10</span>
+    <div class="account-actions">
+      @if (sessionChecking()) {
+        <span class="session-loading" role="status">
+          Comprobando sesión...
+        </span>
+      } @else if (auth.user(); as user) {
+        <div class="account-user">
+          <span class="account-name">{{ user.displayName }}</span>
+          <span class="account-role">
+            {{ user.roles.join(', ') }}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          class="logout-button"
+          [disabled]="isLoggingOut()"
+          (click)="logout()"
+        >
+          {{ isLoggingOut() ? 'Cerrando...' : 'Cerrar sesión' }}
+        </button>
+      } @else {
+        <span class="version">
+          Angular 22 &middot; ASP.NET Core 10
+        </span>
+      }
+    </div>
   </header>
+
+  @if (sessionError(); as error) {
+    <p class="session-error" role="alert">
+      {{ error }}
+    </p>
+  }
 
   <main class="route-content">
     <router-outlet />

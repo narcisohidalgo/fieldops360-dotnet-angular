@@ -1,0 +1,188 @@
+<section class="my-work-orders-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">ÁREA DE TÉCNICOS</p>
+      <h1>Mis órdenes de trabajo</h1>
+      <p>
+        Consulta tus órdenes asignadas y registra
+        el inicio o la finalización del trabajo.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="refresh-button"
+      [disabled]="isLoading() || isChangingStatus() || actionTarget() !== null"
+      (click)="loadOrders()"
+    >
+      Actualizar
+    </button>
+  </header>
+
+  @if (successMessage(); as message) {
+    <p class="success-message" role="status">
+      {{ message }}
+    </p>
+  }
+
+  @if (actionTarget(); as target) {
+    <section
+      class="action-panel"
+      role="group"
+      aria-labelledby="my-work-order-action-title"
+    >
+      <h2 id="my-work-order-action-title">
+        Confirmar: {{ actionLabel(target.action) }}
+      </h2>
+
+      <p>
+        ¿Quieres
+        {{ target.action === 'start' ? 'iniciar' : 'completar' }}
+        la orden
+        <strong>{{ target.order.code }} — {{ target.order.title }}</strong>?
+      </p>
+
+      @if (actionError(); as error) {
+        <p class="action-error" role="alert">
+          {{ error }}
+        </p>
+      }
+
+      <div class="panel-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="isChangingStatus()"
+          (click)="cancelAction()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          class="primary-button"
+          [disabled]="isChangingStatus()"
+          (click)="confirmAction()"
+        >
+          {{
+            isChangingStatus()
+              ? 'Guardando...'
+              : 'Confirmar ' + actionLabel(target.action).toLowerCase()
+          }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (isLoading()) {
+    <p class="message" role="status">
+      Cargando tus órdenes de trabajo...
+    </p>
+  } @else if (errorMessage(); as error) {
+    <div class="message error" role="alert">
+      <p>{{ error }}</p>
+
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="loadOrders()"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else if (orders().length === 0) {
+    <p class="message">
+      No tienes órdenes de trabajo asignadas actualmente.
+    </p>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Orden</th>
+            <th scope="col">Prioridad</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Planificación</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (order of orders(); track order.id) {
+            <tr>
+              <td>
+                <strong>{{ order.code }}</strong>
+                <span class="order-title">{{ order.title }}</span>
+
+                @if (order.description) {
+                  <span class="description">
+                    {{ order.description }}
+                  </span>
+                }
+              </td>
+
+              <td>
+                <span
+                  class="priority"
+                  [class.high]="order.priority === 3"
+                  [class.critical]="order.priority === 4"
+                >
+                  {{ priorityLabel(order.priority) }}
+                </span>
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [class.in-progress]="order.status === statuses.InProgress"
+                  [class.completed]="order.status === statuses.Completed"
+                  [class.cancelled]="order.status === statuses.Cancelled"
+                >
+                  {{ statusLabel(order.status) }}
+                </span>
+              </td>
+
+              <td class="dates-cell">
+                <span>
+                  Inicio previsto:
+                  @if (order.scheduledStartUtc) {
+                    {{ order.scheduledStartUtc | date:'dd/MM/yyyy HH:mm' }}
+                  } @else {
+                    Sin fecha
+                  }
+                </span>
+
+                <span>
+                  Fecha límite:
+                  @if (order.dueAtUtc) {
+                    {{ order.dueAtUtc | date:'dd/MM/yyyy HH:mm' }}
+                  } @else {
+                    Sin fecha
+                  }
+                </span>
+              </td>
+
+              <td>
+                @if (availableAction(order); as action) {
+                  <button
+                    type="button"
+                    class="action-button"
+                    [disabled]="isLoading() || isChangingStatus() || actionTarget() !== null"
+                    [attr.aria-label]="actionLabel(action) + ' orden ' + order.code"
+                    (click)="requestAction(order, action)"
+                  >
+                    {{ actionLabel(action) }}
+                  </button>
+                } @else {
+                  <span class="no-action">
+                    Sin acciones disponibles
+                  </span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

@@ -1,7 +1,8 @@
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { AuthService } from '../../../core/services/auth.service';
 import { Facility } from '../models/facility.model';
 import { FacilityService } from '../services/facility.service';
 import { FacilityCreateForm } from '../components/facility-create-form';
@@ -30,6 +31,12 @@ export class FacilitiesPage implements OnInit {
   protected readonly isActivating = signal(false);
   protected readonly activationError = signal<string | null>(null);
 
+  private readonly auth = inject(AuthService);
+
+  protected readonly canManage = computed(
+    () => this.auth.hasRole('Administrator')
+  );
+
   private readonly facilityService = inject(FacilityService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -38,6 +45,9 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected toggleCreateForm(): void {
+    if (!this.canManage()) {
+      return;
+    }
     if (this.isDeactivating() || this.isActivating()) {
       return;
     }
@@ -57,6 +67,9 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected onFacilityCreated(facility: Facility): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.showCreateForm.set(false);
 
     this.successMessage.set(
@@ -67,6 +80,9 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected editFacility(facility: Facility): void {
+    if (!this.canManage()) {
+      return;
+    }
     if (this.isDeactivating() || this.isActivating()) {
       return;
     }
@@ -86,6 +102,9 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected onFacilityUpdated(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const facility = this.selectedFacility();
 
     this.selectedFacility.set(null);
@@ -100,6 +119,9 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected requestDeactivation(facility: Facility): void {
+    if (!this.canManage()) {
+      return;
+    }
     if (this.isDeactivating() || this.isActivating() || !facility.isActive) {
       return;
     }
@@ -123,6 +145,9 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected confirmDeactivation(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const facility = this.facilityToDeactivate();
 
     if (!facility || this.isDeactivating() || this.isActivating()) {
@@ -177,6 +202,9 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected requestActivation(facility: Facility): void {
+    if (!this.canManage()) {
+      return;
+    }
     if (this.isActivating() || this.isDeactivating() || facility.isActive) {
       return;
     }
@@ -200,6 +228,9 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected confirmActivation(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const facility = this.facilityToActivate();
 
     if (!facility || this.isActivating() || this.isDeactivating()) {

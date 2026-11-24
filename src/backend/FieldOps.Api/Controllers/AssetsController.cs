@@ -1,8 +1,12 @@
+using FieldOps.Api.Security;
+using Microsoft.AspNetCore.Authorization;
 using FieldOps.Application.Assets;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FieldOps.Api.Controllers;
 
+[Authorize(Policy = FieldOpsPolicies.ReadFacilitiesAndAssets)]
+[AutoValidateAntiforgeryToken]
 [ApiController]
 [Route("api/assets")]
 public sealed class AssetsController : ControllerBase
@@ -62,6 +66,7 @@ public sealed class AssetsController : ControllerBase
     }
 
     // PUT /api/assets/{id}
+    [Authorize(Policy = FieldOpsPolicies.ManageAssets)]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(
         Guid id,
@@ -92,6 +97,7 @@ public sealed class AssetsController : ControllerBase
     }
 
     // PATCH /api/assets/{id}/activate
+    [Authorize(Policy = FieldOpsPolicies.ManageAssets)]
     [HttpPatch("{id:guid}/activate")]
     public async Task<IActionResult> Activate(
         Guid id,
@@ -110,6 +116,7 @@ public sealed class AssetsController : ControllerBase
     }
 
     // PATCH /api/assets/{id}/deactivate
+    [Authorize(Policy = FieldOpsPolicies.ManageAssets)]
     [HttpPatch("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(
         Guid id,
@@ -128,6 +135,7 @@ public sealed class AssetsController : ControllerBase
     }
 
     // POST /api/assets
+    [Authorize(Policy = FieldOpsPolicies.ManageAssets)]
     [HttpPost]
     public async Task<ActionResult<AssetDto>> Create(
         [FromBody] CreateAssetCommand command,

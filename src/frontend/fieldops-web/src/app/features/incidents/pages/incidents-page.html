@@ -280,7 +280,7 @@
 
                   @for (
                     action of getAvailableStatusActions(incident);
-                    track action
+                    track $index
                   ) {
                     <button
                       type="button"

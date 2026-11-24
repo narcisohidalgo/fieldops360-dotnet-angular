@@ -1,0 +1,238 @@
+<section class="users-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">ADMINISTRACIÓN</p>
+
+      <h1>Usuarios y permisos</h1>
+
+      <p>
+        Consulta las cuentas de FieldOps 360 y administra
+        su estado de acceso.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        type="button"
+        class="create-user-button"
+        [disabled]="isLoading() || isSaving() || statusTarget() !== null || selectedEditUser() !== null || selectedPasswordUser() !== null"
+        [attr.aria-expanded]="showCreateForm()"
+        aria-controls="user-create-panel"
+        (click)="toggleCreateForm()"
+      >
+        {{ showCreateForm() ? 'Cerrar formulario' : '+ Nuevo usuario' }}
+      </button>
+
+      <button
+        type="button"
+        class="refresh-button"
+        [disabled]="isLoading() || isSaving() || statusTarget() !== null || showCreateForm() || selectedEditUser() !== null || selectedPasswordUser() !== null"
+        (click)="loadUsers()"
+      >
+        Actualizar listado
+      </button>
+    </div>
+  </header>
+
+  @if (showCreateForm()) {
+    <div id="user-create-panel" class="create-user-panel">
+      <app-user-create-form
+        [existingUsers]="users()"
+        (created)="onUserCreated($event)"
+        (cancelled)="cancelCreateForm()"
+      />
+    </div>
+  }
+
+  @if (selectedEditUser(); as selected) {
+    <div id="user-edit-panel" class="edit-user-panel">
+      <app-user-edit-form
+        [user]="selected"
+        [existingUsers]="users()"
+        (updated)="onUserUpdated($event)"
+        (cancelled)="cancelEditUser()"
+      />
+    </div>
+  }
+
+  @if (selectedPasswordUser(); as selected) {
+    <div class="reset-password-panel">
+      <app-user-reset-password-form
+        [user]="selected"
+        (passwordReset)="onPasswordReset($event)"
+        (cancelled)="cancelPasswordReset()"
+      />
+    </div>
+  }
+
+  @if (successMessage(); as message) {
+    <p class="success-message" role="status">
+      {{ message }}
+    </p>
+  }
+
+  @if (statusTarget(); as target) {
+    <section
+      class="confirmation-panel"
+      role="group"
+      aria-labelledby="user-status-heading"
+    >
+      <h2 id="user-status-heading">
+        Confirmar {{ target.isActive ? 'desactivación' : 'activación' }}
+      </h2>
+
+      <p>
+        ¿Quieres
+        {{ target.isActive ? 'desactivar' : 'activar' }}
+        la cuenta
+        <strong>{{ target.displayName }}</strong>
+        ({{ target.email }})?
+      </p>
+
+      @if (target.isActive) {
+        <p class="confirmation-note">
+          El usuario perderá el acceso a la aplicación.
+          Su cuenta y sus datos permanecerán registrados.
+        </p>
+      }
+
+      @if (actionError(); as error) {
+        <p class="action-error" role="alert">
+          {{ error }}
+        </p>
+      }
+
+      <div class="confirmation-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="isSaving()"
+          (click)="cancelStatusChange()"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          class="confirm-button"
+          [class.deactivate]="target.isActive"
+          [disabled]="isSaving()"
+          (click)="confirmStatusChange()"
+        >
+          @if (isSaving()) {
+            Guardando...
+          } @else {
+            Confirmar {{ target.isActive ? 'desactivación' : 'activación' }}
+          }
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (isLoading()) {
+    <p class="message" role="status">
+      Cargando usuarios...
+    </p>
+  } @else if (errorMessage(); as error) {
+    <div class="message error" role="alert">
+      <p>{{ error }}</p>
+
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="loadUsers()"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else if (users().length === 0) {
+    <p class="message">
+      No hay cuentas de usuario registradas.
+    </p>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Usuario</th>
+            <th scope="col">Correo electrónico</th>
+            <th scope="col">Rol</th>
+            <th scope="col">Técnico vinculado</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (user of users(); track user.id) {
+            <tr>
+              <td>
+                <strong>{{ user.displayName }}</strong>
+              </td>
+
+              <td>{{ user.email }}</td>
+
+              <td>
+                <span class="role-pill">
+                  {{ user.roles.join(', ') || 'Sin rol' }}
+                </span>
+              </td>
+
+              <td>
+                @if (user.technicianId) {
+                  <span class="linked">Vinculado</span>
+                } @else {
+                  <span class="muted">Sin vincular</span>
+                }
+              </td>
+
+              <td>
+                <span
+                  class="status-pill"
+                  [class.inactive]="!user.isActive"
+                >
+                  {{ user.isActive ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+
+              <td>
+                <div class="row-actions">
+                  <button
+                    type="button"
+                    class="edit-button"
+                    [disabled]="isLoading() || isSaving() || statusTarget() !== null || showCreateForm() || selectedEditUser() !== null || selectedPasswordUser() !== null"
+                    [attr.aria-label]="'Editar usuario ' + user.displayName"
+                    (click)="editUser(user)"
+                  >
+                    Editar
+                  </button>
+
+                  <button
+                    type="button"
+                    class="password-button"
+                    [disabled]="isLoading() || isSaving() || statusTarget() !== null || showCreateForm() || selectedEditUser() !== null || selectedPasswordUser() !== null"
+                    [attr.aria-label]="'Restablecer contraseña de ' + user.displayName"
+                    (click)="requestPasswordReset(user)"
+                  >
+                    Restablecer contraseña
+                  </button>
+
+                  <button
+                    type="button"
+                    class="status-button"
+                    [class.deactivate]="user.isActive"
+                    [disabled]="isLoading() || isSaving() || statusTarget() !== null || showCreateForm() || selectedEditUser() !== null || selectedPasswordUser() !== null"
+                    [attr.aria-label]="(user.isActive ? 'Desactivar' : 'Activar') + ' usuario ' + user.displayName"
+                    (click)="requestStatusChange(user)"
+                  >
+                    {{ user.isActive ? 'Desactivar' : 'Activar' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

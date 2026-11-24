@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FieldOps.Api.Controllers;
 
@@ -6,6 +7,7 @@ namespace FieldOps.Api.Controllers;
 [Route("api/system")]
 public sealed class SystemController : ControllerBase
 {
+    [AllowAnonymous]
     [HttpGet("status")]
     public IActionResult GetStatus()
     {

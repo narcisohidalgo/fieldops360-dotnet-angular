@@ -1,8 +1,12 @@
+using FieldOps.Api.Security;
+using Microsoft.AspNetCore.Authorization;
 using FieldOps.Application.Facilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FieldOps.Api.Controllers;
 
+[Authorize(Policy = FieldOpsPolicies.ReadFacilitiesAndAssets)]
+[AutoValidateAntiforgeryToken]
 [ApiController]
 [Route("api/facilities")]
 public sealed class FacilitiesController : ControllerBase
@@ -40,6 +44,7 @@ public sealed class FacilitiesController : ControllerBase
         return Ok(facility);
     }
 
+    [Authorize(Policy = FieldOpsPolicies.ManageFacilities)]
     [HttpPost]
     public async Task<ActionResult<FacilityDto>> Create(
         [FromBody] CreateFacilityCommand command,
@@ -71,6 +76,7 @@ public sealed class FacilitiesController : ControllerBase
         }
     }
 
+    [Authorize(Policy = FieldOpsPolicies.ManageFacilities)]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(
         Guid id,
@@ -98,6 +104,7 @@ public sealed class FacilitiesController : ControllerBase
         }
     }
 
+    [Authorize(Policy = FieldOpsPolicies.ManageFacilities)]
     [HttpPatch("{id:guid}/activate")]
     public async Task<IActionResult> Activate(
         Guid id,
@@ -115,6 +122,7 @@ public sealed class FacilitiesController : ControllerBase
     }
 
 
+    [Authorize(Policy = FieldOpsPolicies.ManageFacilities)]
     [HttpPatch("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(
         Guid id,

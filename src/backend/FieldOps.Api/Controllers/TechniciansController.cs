@@ -1,8 +1,12 @@
-﻿using FieldOps.Application.Technicians;
+using FieldOps.Api.Security;
+using Microsoft.AspNetCore.Authorization;
+using FieldOps.Application.Technicians;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FieldOps.Api.Controllers;
 
+[Authorize(Policy = FieldOpsPolicies.ReadTechnicians)]
+[AutoValidateAntiforgeryToken]
 [ApiController]
 [Route("api/technicians")]
 public sealed class TechniciansController : ControllerBase
@@ -41,6 +45,7 @@ public sealed class TechniciansController : ControllerBase
         return Ok(technician);
     }
 
+    [Authorize(Policy = FieldOpsPolicies.ManageTechnicians)]
     [HttpPost]
     public async Task<ActionResult<TechnicianDto>> Create(
         [FromBody] CreateTechnicianCommand command,
@@ -72,6 +77,7 @@ public sealed class TechniciansController : ControllerBase
         }
     }
 
+    [Authorize(Policy = FieldOpsPolicies.ManageTechnicians)]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(
         Guid id,
@@ -99,6 +105,7 @@ public sealed class TechniciansController : ControllerBase
         }
     }
 
+    [Authorize(Policy = FieldOpsPolicies.ManageTechnicians)]
     [HttpPatch("{id:guid}/activate")]
     public async Task<IActionResult> Activate(
         Guid id,
@@ -115,6 +122,7 @@ public sealed class TechniciansController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Policy = FieldOpsPolicies.ManageTechnicians)]
     [HttpPatch("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(
         Guid id,
