@@ -25,6 +25,7 @@ public static class FieldOpsPolicies
     public const string ReadWorkOrders = "WorkOrders.Read";
     public const string ManageWorkOrders = "WorkOrders.Manage";
 
+    public const string ReadDashboard = "Dashboard.Read";
     public const string ManageUsers = "Users.Manage";
 }
 
@@ -112,14 +113,21 @@ public static class FieldOpsAuthorization
                         FieldOpsRoles.Supervisor));
 
             options.AddPolicy(
+                FieldOpsPolicies.ReadDashboard,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .RequireRole(
+                        FieldOpsRoles.Administrator,
+                        FieldOpsRoles.Supervisor));
+            options.AddPolicy(
                 FieldOpsPolicies.ManageUsers,
                 policy => policy
                     .RequireAuthenticatedUser()
                     .RequireRole(FieldOpsRoles.Administrator));
         });
 
-        // El acceso de Technician a incidencias y ordenes
-        // se implementara con autorizacion por recurso.
+        // Los endpoints de trabajo propio del Technician
+        // aplican comprobaciones de propiedad del recurso.
         return services;
     }
 }

@@ -7,10 +7,11 @@ import { Facility } from '../models/facility.model';
 import { FacilityService } from '../services/facility.service';
 import { FacilityCreateForm } from '../components/facility-create-form';
 import { FacilityEditForm } from '../components/facility-edit-form';
+import { FacilitiesMap } from '../components/facilities-map';
 
 @Component({
   selector: 'app-facilities-page',
-  imports: [FacilityCreateForm, FacilityEditForm],
+  imports: [FacilityCreateForm, FacilityEditForm, FacilitiesMap],
   templateUrl: './facilities-page.html',
   styleUrl: './facilities-page.scss'
 })

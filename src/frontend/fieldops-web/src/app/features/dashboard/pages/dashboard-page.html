@@ -1,0 +1,142 @@
+<section class="dashboard-page">
+  <header class="dashboard-header">
+    <div>
+      <p class="eyebrow">FIELDOPS 360 · OPERACIONES</p>
+      <h1>Dashboard operativo</h1>
+      <p class="subtitle">
+        Indicadores de instalaciones, activos, incidencias,
+        técnicos y órdenes de trabajo.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="refresh-button"
+      [disabled]="isLoading()"
+      (click)="refresh()"
+    >
+      {{ isLoading() ? 'Actualizando...' : 'Actualizar datos' }}
+    </button>
+  </header>
+
+  @if (isLoading()) {
+    <p class="notice" role="status">
+      Cargando indicadores del dashboard...
+    </p>
+  } @else if (errorMessage(); as error) {
+    <div class="notice notice-error" role="alert">
+      <p>{{ error }}</p>
+      <button type="button" class="retry-button" (click)="refresh()">
+        Reintentar
+      </button>
+    </div>
+  } @else if (summary(); as data) {
+    <div class="dashboard-grid">
+      <article class="dashboard-card">
+        <h2>Instalaciones</h2>
+        <strong class="metric">{{ data.facilities.total }}</strong>
+        <p>{{ data.facilities.active }} activas</p>
+        <a routerLink="/facilities">Ver instalaciones</a>
+      </article>
+
+      <article class="dashboard-card">
+        <h2>Activos</h2>
+        <strong class="metric">{{ data.assets.total }}</strong>
+        <p>{{ data.assets.active }} activos</p>
+        <a routerLink="/assets">Ver activos</a>
+      </article>
+
+      <article class="dashboard-card">
+        <h2>Técnicos</h2>
+        <strong class="metric">{{ data.technicians.total }}</strong>
+        <p>{{ data.technicians.active }} {{ data.technicians.active === 1 ? 'activo' : 'activos' }}</p>
+        <a routerLink="/technicians">Ver técnicos</a>
+      </article>
+
+      <article class="dashboard-card">
+        <h2>Incidencias</h2>
+        <strong class="metric">{{ data.incidents.total }}</strong>
+        <p>
+          {{ data.incidents.open }} abiertas ·
+          {{ data.incidents.inProgress }} en curso
+        </p>
+        <a routerLink="/incidents">Ver incidencias</a>
+      </article>
+
+      <article class="dashboard-card">
+        <h2>Órdenes de trabajo</h2>
+        <strong class="metric">{{ data.workOrders.total }}</strong>
+        <p>
+          {{ data.workOrders.planned }} {{ data.workOrders.planned === 1 ? 'planificada' : 'planificadas' }} ·
+          {{ data.workOrders.inProgress }} en curso
+        </p>
+        <a routerLink="/work-orders">Ver órdenes</a>
+      </article>
+
+      <article class="dashboard-card dashboard-card-alert">
+        <h2>Órdenes vencidas</h2>
+        <strong class="metric">{{ data.workOrders.overdue }}</strong>
+        <p>
+          {{ data.workOrders.unassignedPlanned }}
+          {{ data.workOrders.unassignedPlanned === 1 ? 'planificada sin asignar' : 'planificadas sin asignar' }}
+        </p>
+        <a routerLink="/work-orders">Revisar órdenes</a>
+      </article>
+    </div>
+
+    <section class="charts-grid" aria-label="Gráficos estadísticos">
+      <article class="chart-panel" aria-labelledby="incidents-chart-title">
+        <h2 id="incidents-chart-title">Incidencias por estado</h2>
+        <p class="chart-total">{{ data.incidents.total }} incidencias</p>
+
+        @if (data.incidents.total === 0) {
+          <p class="chart-empty">No hay incidencias registradas.</p>
+        } @else {
+          @for (bar of incidentChart(); track bar.key) {
+            <div class="chart-row">
+              <div class="chart-label">
+                <span>{{ bar.label }}</span>
+                <strong>{{ bar.count }} ({{ bar.percentage | number:'1.0-0' }}%)</strong>
+              </div>
+              <div class="chart-track" aria-hidden="true">
+                <span
+                  [class]="'chart-fill ' + bar.color"
+                  [style.width.%]="bar.percentage"
+                ></span>
+              </div>
+            </div>
+          }
+        }
+      </article>
+
+      <article class="chart-panel" aria-labelledby="orders-chart-title">
+        <h2 id="orders-chart-title">Órdenes de trabajo por estado</h2>
+        <p class="chart-total">{{ data.workOrders.total }} órdenes</p>
+
+        @if (data.workOrders.total === 0) {
+          <p class="chart-empty">No hay órdenes registradas.</p>
+        } @else {
+          @for (bar of workOrderChart(); track bar.key) {
+            <div class="chart-row">
+              <div class="chart-label">
+                <span>{{ bar.label }}</span>
+                <strong>{{ bar.count }} ({{ bar.percentage | number:'1.0-0' }}%)</strong>
+              </div>
+              <div class="chart-track" aria-hidden="true">
+                <span
+                  [class]="'chart-fill ' + bar.color"
+                  [style.width.%]="bar.percentage"
+                ></span>
+              </div>
+            </div>
+          }
+        }
+      </article>
+    </section>
+    <p class="updated-at">
+      Última consulta:
+      {{ data.generatedAtUtc | date:'dd/MM/yyyy HH:mm' }}
+      (hora local)
+    </p>
+  }
+</section>

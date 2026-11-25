@@ -115,6 +115,7 @@ describe('App', () => {
       '/',
       '/facilities',
       '/assets',
+      '/dashboard',
       '/incidents',
       '/technicians',
       '/work-orders',

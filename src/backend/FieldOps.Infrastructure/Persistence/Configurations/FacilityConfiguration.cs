@@ -1,4 +1,4 @@
-﻿using FieldOps.Domain.Entities;
+using FieldOps.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -26,6 +26,12 @@ public sealed class FacilityConfiguration : IEntityTypeConfiguration<Facility>
 
         builder.Property(f => f.Address)
             .HasMaxLength(250);
+
+        builder.Property(f => f.Latitude)
+            .HasPrecision(9, 6);
+
+        builder.Property(f => f.Longitude)
+            .HasPrecision(9, 6);
 
         builder.Property(f => f.IsActive)
             .IsRequired();

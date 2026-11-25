@@ -1,4 +1,4 @@
-﻿import {
+import {
   Component,
   DestroyRef,
   effect,
@@ -19,6 +19,12 @@ import {
 
 import { Facility } from '../models/facility.model';
 import { FacilityService } from '../services/facility.service';
+import {
+  coordinatesPairValidator,
+  latitudeValidators,
+  longitudeValidators,
+  parseCoordinate
+} from './facility-coordinates';
 
 function notBlankValidator(
   control: AbstractControl
@@ -64,8 +70,10 @@ export class FacilityEditForm {
     ]],
     address: ['', [
       Validators.maxLength(250)
-    ]]
-  });
+    ]],
+    latitude: ['', latitudeValidators],
+    longitude: ['', longitudeValidators]
+  }, { validators: coordinatesPairValidator });
 
   constructor() {
     effect(() => {
@@ -74,7 +82,9 @@ export class FacilityEditForm {
       this.form.reset({
         name: facility.name,
         city: facility.city,
-        address: facility.address ?? ''
+        address: facility.address ?? '',
+        latitude: facility.latitude?.toString() ?? '',
+        longitude: facility.longitude?.toString() ?? ''
       });
     });
   }
@@ -98,7 +108,9 @@ export class FacilityEditForm {
     this.facilityService.update(this.facility().id, {
       name: values.name.trim(),
       city: values.city.trim(),
-      address: values.address.trim() || null
+      address: values.address.trim() || null,
+      latitude: parseCoordinate(values.latitude),
+      longitude: parseCoordinate(values.longitude)
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

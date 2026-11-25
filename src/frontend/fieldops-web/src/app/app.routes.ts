@@ -17,6 +17,17 @@ export const routes: Routes = [
         .then(m => m.HomePage)
   },
   {
+    path: 'dashboard',
+    canActivate: [authGuard],
+    data: {
+      roles: ['Administrator', 'Supervisor']
+    },
+    title: 'Dashboard | FieldOps 360',
+    loadComponent: () =>
+      import('./features/dashboard/pages/dashboard-page')
+        .then(m => m.DashboardPage)
+  },
+  {
     path: 'facilities',
     canActivate: [authGuard],
     data: {

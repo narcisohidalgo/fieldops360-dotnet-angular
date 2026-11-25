@@ -72,6 +72,46 @@
       }
     </div>
 
+    <div class="form-field">
+      <label for="facility-latitude">Latitud (opcional)</label>
+      <input
+        id="facility-latitude"
+        type="text"
+        inputmode="decimal"
+        formControlName="latitude"
+        placeholder="Ej.: 37.888200"
+        autocomplete="off"
+      />
+      @if (form.controls.latitude.touched && form.controls.latitude.invalid) {
+        <small class="field-error">
+          Introduce una latitud entre -90 y 90, con hasta 6 decimales.
+        </small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="facility-longitude">Longitud (opcional)</label>
+      <input
+        id="facility-longitude"
+        type="text"
+        inputmode="decimal"
+        formControlName="longitude"
+        placeholder="Ej.: -4.779400"
+        autocomplete="off"
+      />
+      @if (form.controls.longitude.touched && form.controls.longitude.invalid) {
+        <small class="field-error">
+          Introduce una longitud entre -180 y 180, con hasta 6 decimales.
+        </small>
+      }
+    </div>
+
+    @if (form.hasError('coordinatesPair') &&
+         (form.controls.latitude.touched || form.controls.longitude.touched)) {
+      <p class="field-error" role="alert">
+        Indica ambas coordenadas o deja las dos vacías.
+      </p>
+    }
     @if (saveError()) {
       <p class="save-error" role="alert">
         {{ saveError() }}

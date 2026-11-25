@@ -40,6 +40,10 @@ public sealed class FacilityService : IFacilityService
             command.City,
             command.Address);
 
+        facility.SetCoordinates(
+            command.Latitude,
+            command.Longitude);
+
         if (await _repository.ExistsByCodeAsync(
             facility.Code, cancellationToken))
         {
@@ -63,10 +67,12 @@ public sealed class FacilityService : IFacilityService
         if (facility is null)
             return false;
 
-        facility.UpdateDetails(
+        facility.UpdateDetailsAndCoordinates(
             command.Name,
             command.City,
-            command.Address);
+            command.Address,
+            command.Latitude,
+            command.Longitude);
 
         await _repository.SaveChangesAsync(cancellationToken);
 
@@ -116,6 +122,8 @@ public sealed class FacilityService : IFacilityService
             facility.Name,
             facility.City,
             facility.Address,
-            facility.IsActive);
+            facility.IsActive,
+            facility.Latitude,
+            facility.Longitude);
     }
 }

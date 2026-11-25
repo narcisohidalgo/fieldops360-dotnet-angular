@@ -1,0 +1,42 @@
+<section class="map-panel" aria-labelledby="facilities-map-title">
+  <div class="map-header">
+    <div>
+      <h2 id="facilities-map-title">Mapa de instalaciones</h2>
+      <p>Ubicación geográfica de los centros registrados.</p>
+    </div>
+
+    <span class="map-count">
+      {{ located().length }} de {{ facilities().length }} ubicadas
+    </span>
+  </div>
+
+  @if (missingCount() > 0) {
+    <p class="map-note">
+      {{ missingCount() }}
+      {{ missingCount() === 1 ? 'instalación no tiene' : 'instalaciones no tienen' }}
+      coordenadas. Puedes añadirlas desde Editar.
+    </p>
+  }
+
+  @if (facilities().length === 0) {
+    <p class="map-note">
+      Todavía no hay instalaciones para representar.
+    </p>
+  }
+
+  @if (errorMessage(); as error) {
+    <p class="map-error" role="alert">{{ error }}</p>
+  }
+
+  <div
+    #mapContainer
+    class="map-canvas"
+    role="region"
+    aria-label="Mapa interactivo de instalaciones"
+  ></div>
+
+  <p class="map-legend">
+    <span><i class="dot active"></i> Activas</span>
+    <span><i class="dot inactive"></i> Inactivas</span>
+  </p>
+</section>

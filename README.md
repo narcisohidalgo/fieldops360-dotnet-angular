@@ -4,7 +4,7 @@
 
 FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Phases 1-10 completed for local development and portfolio demonstration. Facilities, Assets, Incidents, Technicians, Work Orders, ASP.NET Core Identity authentication, role-based authorization and user management are implemented. Production deployment hardening and further integration testing remain future work.
+> **Project status:** Phases 1-11 implemented and technically validated for local development and portfolio demonstration. Facilities, Assets, Incidents, Technicians, Work Orders, ASP.NET Core Identity authentication, role-based authorization and user management are implemented. Production deployment hardening and further integration testing remain future work.
 
 ## Technology stack
 
@@ -15,6 +15,7 @@ FieldOps 360 is a full-stack portfolio project for managing facilities, their eq
 | Persistence | SQL Server, Entity Framework Core 10, migrations |
 | Architecture | Clean Architecture (Domain, Application, Infrastructure, API) |
 | Tests | xUnit (.NET), Vitest (Angular) |
+| Dashboard and GIS | Angular signals, CSS charts, Leaflet 1.9.4, OpenStreetMap tiles |
 
 ## Implemented features
 
@@ -42,11 +43,29 @@ Authorization is enforced by the API. Angular route guards provide navigation co
 
 See [Phase 10 security design](docs/security/phase10-security-design.md) for implementation details, verification and remaining hardening work.
 
+### Operational dashboard and GIS (Phase 11)
+
+- View operational KPIs for facilities, assets, technicians, incidents and work orders.
+- Display incident and work-order status distributions with responsive charts.
+- Monitor overdue and unassigned planned work orders.
+- Refresh indicators using authenticated `GET /api/dashboard/summary`.
+- Restrict dashboard access to Administrator and Supervisor.
+- Record optional geographic coordinates for facilities.
+- Validate coordinate ranges and require latitude and longitude together.
+- Display geolocated facilities on an interactive Leaflet map.
+- Differentiate active and inactive facilities with colored markers.
+- Show facility information in map popups.
+- Report facilities without coordinates instead of inventing locations.
+
+See [Phase 11 technical documentation](docs/phase11-dashboard-gis.md)
+for implementation details, verification and limitations.
+
 ### Facilities
 
 - List facilities and retrieve an individual facility.
 - Create and update facilities with validation and unique facility codes.
 - Activate or deactivate facilities without deleting their records.
+- Store optional latitude and longitude, editable through the Angular forms and available through the REST API.
 
 ### Assets
 
@@ -123,6 +142,7 @@ tests/
 docs/
   database/                    # SQL database documentation
   security/                    # Authentication, authorization and security
+  phase11-dashboard-gis.md     # Dashboard, KPIs, geolocation and map
 ```
 
 The frontend uses feature-based folders under `src/app/features/`, Angular `HttpClient` services and lazy-loaded routes.
@@ -146,7 +166,13 @@ The frontend uses feature-based folders under `src/app/features/`, Angular `Http
 | GET | `/api/my/work-orders/{id}` | Retrieve an assigned work order |
 | PATCH | `/api/my/work-orders/{id}/start` | Start an assigned work order |
 | PATCH | `/api/my/work-orders/{id}/complete` | Complete an assigned work order |
-| GET | `/api/facilities` | List facilities |
+| GET | `/api/dashboard/summary` | Operational KPIs (Administrator/Supervisor) |
+| GET | `/api/facilities` | List facilities, including optional coordinates |
+| GET | `/api/facilities/{id}` | Retrieve facility details and coordinates |
+| POST | `/api/facilities` | Create a facility (Administrator) |
+| PUT | `/api/facilities/{id}` | Update facility details and coordinates (Administrator) |
+| PATCH | `/api/facilities/{id}/activate` | Activate a facility (Administrator) |
+| PATCH | `/api/facilities/{id}/deactivate` | Deactivate a facility (Administrator) |
 | GET | `/api/assets` | List assets; optional `facilityId` filter |
 | GET | `/api/incidents` | List incidents; optional `facilityId`, `assetId`, `status`, `priority` filters |
 | GET | `/api/incidents/{id}` | Retrieve an incident |
@@ -199,7 +225,7 @@ Run from the repository root:
 dotnet ef database update --project src/backend/FieldOps.Infrastructure/FieldOps.Infrastructure.csproj --startup-project src/backend/FieldOps.Api/FieldOps.Api.csproj --context FieldOpsDbContext
 ```
 
-This applies all available migrations, including `InitialCreate`, `AddIncidents`, `AddIncidentRowVersion`, `AddTechnicians`, `AddWorkOrders` and `AddIdentitySecurity`, as needed. The file `docs/database/InitialCreate.sql` represents **only the initial schema**, not the complete current schema; see [Database documentation](docs/database/README.md).
+This applies all available migrations, including `InitialCreate`, `AddIncidents`, `AddIncidentRowVersion`, `AddTechnicians`, `AddWorkOrders` and `AddIdentitySecurity` and `AddFacilityCoordinates`, as needed. The file `docs/database/InitialCreate.sql` represents **only the initial schema**, not the complete current schema; see [Database documentation](docs/database/README.md).
 
 ### 3. Bootstrap the first administrator (new databases only)
 
@@ -242,6 +268,7 @@ Angular runs at `http://localhost:4200` and forwards `/api/**` requests to the b
 - `http://localhost:4200/` — Home
 - `http://localhost:4200/facilities` — Facilities
 - `http://localhost:4200/assets` — Assets
+- `http://localhost:4200/dashboard` — Operational Dashboard (Administrator/Supervisor)
 - `http://localhost:4200/incidents` — Incidents
 - `http://localhost:4200/technicians` — Technicians
 - `http://localhost:4200/work-orders` — Work Orders
@@ -265,7 +292,9 @@ npm.cmd test -- --watch=false
 npm.cmd run build
 ```
 
-Following Phase 10 local validation (November 2026), **246 .NET/xUnit tests and 376 Angular/Vitest tests across 34 test files passed (622 tests total)**. The .NET Release build and Angular production build also succeeded. The Phase 10 security implementation was manually checked against role-based authorization and authentication scenarios.
+Following the Phase 11 local audit (25 November 2026), **263 .NET/xUnit tests and 398 Angular/Vitest tests were verified (661 total)**. The .NET Release build and Angular production build succeeded.
+
+The full Angular suite initially passed 397 of 398 tests. One outdated navigation assertion was corrected, and all eight tests in the affected file passed when rerun. The remaining 390 tests had already passed in the full run. Leaflet 1.9.4 produces a non-blocking CommonJS optimization warning during the Angular production build.
 
 Work Order REST operations passed 38 functional HTTP checks. An additional local concurrent-request check returned one HTTP 201 Created and one HTTP 409 Conflict for two requests using the same work order code; a further duplicate returned HTTP 409, and exactly one matching record was persisted. This validates the observed HTTP behavior but does not specifically prove that SQL Server's unique-index exception handler was exercised.
 

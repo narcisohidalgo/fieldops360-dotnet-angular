@@ -77,7 +77,9 @@ describe('FacilityCreateForm', () => {
       code: 'FAC-TEST-005',
       name: 'Centro de operaciones',
       city: 'Sevilla',
-      address: 'Avenida Industria 20'
+      address: 'Avenida Industria 20',
+      latitude: null,
+      longitude: null
     });
 
     // Simular la respuesta de ASP.NET Core
@@ -352,4 +354,86 @@ describe('FacilityCreateForm', () => {
     // No debe enviarse ninguna petición HTTP
     httpMock.expectNone('/api/facilities');
   });
+  it('envia coordenadas validas al crear una instalacion', () => {
+    const fixture = TestBed.createComponent(FacilityCreateForm);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+
+    const values: Record<string, string> = {
+      code: 'FAC-GIS-01',
+      name: 'Centro GIS',
+      city: 'Cordoba',
+      latitude: '37.888200',
+      longitude: '-4.779400'
+    };
+
+    for (const [field, value] of Object.entries(values)) {
+      const input = element.querySelector<HTMLInputElement>(
+        `#facility-${field}`
+      );
+
+      if (!input) throw new Error(`Missing input ${field}`);
+
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    element.querySelector('form')!.dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+
+    const request = httpMock.expectOne('/api/facilities');
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body.latitude).toBe(37.8882);
+    expect(request.request.body.longitude).toBe(-4.7794);
+
+    request.flush({
+      id: '00000000-0000-0000-0000-000000000099',
+      ...request.request.body,
+      isActive: true
+    });
+  });
+
+  for (const invalid of [
+    { title: 'latitud fuera de rango', lat: '95', lon: '0' },
+    { title: 'una sola coordenada', lat: '37', lon: '' },
+    { title: 'mas de seis decimales', lat: '37.1234567', lon: '-4' }
+  ]) {
+    it(`rechaza ${invalid.title}`, () => {
+      const fixture = TestBed.createComponent(FacilityCreateForm);
+      fixture.detectChanges();
+
+      const element = fixture.nativeElement as HTMLElement;
+
+      const values: Record<string, string> = {
+        code: 'FAC-GIS-02',
+        name: 'Centro GIS',
+        city: 'Cordoba',
+        latitude: invalid.lat,
+        longitude: invalid.lon
+      };
+
+      for (const [field, value] of Object.entries(values)) {
+        const input = element.querySelector<HTMLInputElement>(
+          `#facility-${field}`
+        );
+
+        if (!input) throw new Error(`Missing input ${field}`);
+
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      element.querySelector('form')!.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true })
+      );
+
+      fixture.detectChanges();
+
+      expect(element.querySelector('.field-error')).not.toBeNull();
+      httpMock.expectNone('/api/facilities');
+    });
+  }
 });

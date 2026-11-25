@@ -4,6 +4,7 @@ using FieldOps.Application.Incidents;
 using FieldOps.Application.Facilities;
 using FieldOps.Application.Technicians;
 using FieldOps.Application.WorkOrders;
+using FieldOps.Application.Dashboard;
 using FieldOps.Api.Bootstrap;
 using FieldOps.Infrastructure;
 using FieldOps.Api.Services;
@@ -58,9 +59,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddFieldOpsAuthorization();
 
-// Preparar los servicios antifalsificacion.
-// La validacion de solicitudes se incorporara al
-// implementar los endpoints y la proteccion global de la API.
+// Configurar antifalsificacion para las peticiones de escritura.
+// Los controladores ya aplican su validacion global.
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-XSRF-TOKEN";
@@ -80,6 +80,8 @@ builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<ITechnicianService, TechnicianService>();
 builder.Services.AddScoped<IWorkOrderService, WorkOrderService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 // Comprobar cambios de roles, contrasenas y estado
 // en cada peticion autenticada.

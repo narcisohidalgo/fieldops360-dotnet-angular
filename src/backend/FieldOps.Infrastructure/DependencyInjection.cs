@@ -46,6 +46,7 @@ public static class DependencyInjection
         .AddRoles<IdentityRole<Guid>>()
         .AddSignInManager()
         .AddEntityFrameworkStores<FieldOpsDbContext>();
+        services.AddScoped<IDashboardReadRepository, DashboardReadRepository>();
         services.AddScoped<IFacilityRepository, FacilityRepository>();
         services.AddScoped<IAssetRepository, AssetRepository>();
         services.AddScoped<IIncidentRepository, IncidentRepository>();

@@ -9,6 +9,8 @@ The authoritative database schema is managed through **Entity Framework Core mig
 - `20261123163133_AddIncidentRowVersion` — adds the SQL Server `rowversion` concurrency token to `Incidents`, allowing EF Core to detect conflicting concurrent updates.
 - `20261124045123_AddTechnicians` — creates `Technicians`, with a GUID primary key, required code/name/email, optional phone/specialty, active status and a unique index on `Code`.
 - `20261124064857_AddWorkOrders` — creates `WorkOrders`, with required facility, optional asset/incident/technician relationships, workflow and scheduling fields, UTC timestamps, a unique index on `Code`, query indexes and an EF Core SQL Server `rowversion` concurrency token. Foreign keys use restricted deletion.
+- `20261124160816_AddIdentitySecurity` — adds ASP.NET Core Identity users, roles and related security persistence.
+- `20261125065110_AddFacilityCoordinates` — adds nullable `Latitude` and `Longitude` columns to `Facilities`, both `decimal(9,6)`, without deleting existing facility records.
 
 Technicians are referenced optionally by Work Orders. Their codes cannot be changed through the technician update operation. Work Orders validate their facility, asset, incident and technician relationships at application level, while SQL Server foreign keys protect referential integrity.
 

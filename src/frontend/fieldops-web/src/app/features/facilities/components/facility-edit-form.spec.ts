@@ -359,7 +359,9 @@ describe('FacilityEditForm', () => {
     expect(request.request.body).toEqual({
       name: 'Centro de Operaciones Sevilla Este',
       city: 'Sevilla',
-      address: 'Avenida de la Innovación 25'
+      address: 'Avenida de la Innovación 25',
+      latitude: null,
+      longitude: null
     });
 
     // El código empresarial no debe enviarse para modificarlo.

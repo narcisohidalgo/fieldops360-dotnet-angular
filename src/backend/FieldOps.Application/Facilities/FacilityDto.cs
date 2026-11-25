@@ -1,4 +1,4 @@
-﻿namespace FieldOps.Application.Facilities;
+namespace FieldOps.Application.Facilities;
 
 public sealed record FacilityDto(
     Guid Id,
@@ -6,5 +6,7 @@ public sealed record FacilityDto(
     string Name,
     string City,
     string? Address,
-    bool IsActive
+    bool IsActive,
+    decimal? Latitude = null,
+    decimal? Longitude = null
 );

@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, inject, output, signal } from '@angular/core';
+import { Component, DestroyRef, inject, output, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -11,6 +11,12 @@ import {
 
 import { Facility } from '../models/facility.model';
 import { FacilityService } from '../services/facility.service';
+import {
+  coordinatesPairValidator,
+  latitudeValidators,
+  longitudeValidators,
+  parseCoordinate
+} from './facility-coordinates';
 
 function notBlankValidator(
   control: AbstractControl
@@ -58,8 +64,10 @@ export class FacilityCreateForm {
     ]],
     address: ['', [
       Validators.maxLength(250)
-    ]]
-  });
+    ]],
+    latitude: ['', latitudeValidators],
+    longitude: ['', longitudeValidators]
+  }, { validators: coordinatesPairValidator });
 
   protected onSubmit(): void {
     if (this.isSaving()) {
@@ -81,7 +89,9 @@ export class FacilityCreateForm {
       code: values.code.trim(),
       name: values.name.trim(),
       city: values.city.trim(),
-      address: values.address.trim() || null
+      address: values.address.trim() || null,
+      latitude: parseCoordinate(values.latitude),
+      longitude: parseCoordinate(values.longitude)
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

@@ -1,7 +1,9 @@
-﻿namespace FieldOps.Application.Facilities;
+namespace FieldOps.Application.Facilities;
 
 public sealed record UpdateFacilityCommand(
     string Name,
     string City,
-    string? Address
+    string? Address,
+    decimal? Latitude = null,
+    decimal? Longitude = null
 );

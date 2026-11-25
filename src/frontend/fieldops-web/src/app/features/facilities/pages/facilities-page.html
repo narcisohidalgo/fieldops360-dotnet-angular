@@ -228,4 +228,8 @@
       </table>
     </div>
   }
+
+  @if (!isLoading() && !errorMessage()) {
+    <app-facilities-map [facilities]="facilities()" />
+  }
 </section>
