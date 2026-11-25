@@ -4,7 +4,7 @@
 
 FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Phases 1-13 implemented and validated. Phase 14 adds a containerized HTTPS deployment, restricted SQL Server credentials, persistent storage, Docker-based integration testing and a GitHub Actions CI/CD pipeline. Local Docker deployment and consolidated validation of **794 automated test scenarios** have been completed successfully. The expanded CI/CD workflow is configured; its first remote execution and GHCR publication remain pending verification. Public production hosting is outside the current deployment scope.
+> **Project status:** Phases 1-14 implemented and validated within the local deployment and continuous delivery scope. Phase 14 adds a containerized HTTPS deployment, restricted SQL Server credentials, persistent storage, Docker-based integration testing and a GitHub Actions CI/CD pipeline. Local Docker deployment and consolidated validation of **794 automated test scenarios** have been completed successfully. The expanded CI/CD workflow has passed all five GitHub Actions jobs. Three public GHCR images have been published and verified, and a fresh isolated installation from those images has been successfully started. Public production hosting is outside the current deployment scope.
 
 ## Technology stack
 
@@ -269,10 +269,29 @@ metadata.
 This is continuous delivery to a container registry, not automatic
 deployment to a public server.
 
-**Verification status:** the expanded workflow has passed static
-Actionlint and ShellCheck validation. Its first remote execution,
-registry publication and installation from GHCR still require
-verification.
+**Verification status:** the expanded workflow passed static
+Actionlint and ShellCheck validation and completed its first
+full remote execution successfully on 25 November 2026.
+
+GitHub Actions run **#4**, source revision
+`13cb8c258bd09847a4e981c5d4357d4a1c045f2c`:
+
+| Job | Result | Duration |
+| --- | --- | ---: |
+| Backend | Passed | 46 s |
+| Frontend | Passed | 25 s |
+| Integration and E2E | Passed | 2m 29s |
+| Docker | Passed | 2m 21s |
+| Publish to GHCR | Passed | 1m 37s |
+
+**Total workflow duration: 4m 11s.**
+
+All five jobs succeeded, and all three container images were
+published. Anonymous access to their registry manifests was
+verified, together with the downloaded image revision labels,
+source labels, platform and registry digests.
+
+See [GitHub Actions execution history](https://github.com/narcisohidalgo/fieldops360-dotnet-angular/actions).
 
 See [Phase 14 Docker and CI/CD documentation](docs/phase14-docker-cicd.md)
 for architecture, operational procedures and deployment limitations.
@@ -373,8 +392,23 @@ The corresponding repository configuration and provisioning
 scripts are still required, but Angular and .NET do not need
 to be compiled locally.
 
-**Status:** this installation mode is configured but has not yet
-been verified against actual published GHCR packages.
+**Status:** verified using publicly accessible GHCR packages
+published from commit:
+
+`13cb8c258bd09847a4e981c5d4357d4a1c045f2c`
+
+A fresh repository clone was installed in an isolated Docker
+environment without locally compiling Angular or .NET.
+
+The verification covered fresh credentials and TLS material,
+all seven EF Core migrations, restricted SQL runtime access,
+administrator bootstrap, application startup and HTTPS checks.
+
+The temporary environment was removed successfully, and the
+existing local environment was preserved.
+
+See the technical documentation for image digests, isolation
+details and the scope of the installation verification.
 
 The Docker database is `FieldOpsDockerDb`. It is separate from the
 native development database `FieldOpsDb`.
@@ -603,9 +637,10 @@ by `index.html` total **382.26 kB**.
 This is the raw size of the referenced files, not an estimated
 compressed network transfer size.
 
-The first remote execution of the expanded CI/CD workflow,
-GHCR publication and installation from published images
-remain pending verification.
+The expanded CI/CD workflow subsequently passed all five
+GitHub Actions jobs. GHCR publication, public manifest access,
+image metadata and digests, and isolated application startup
+from the published images have also been verified.
 
 ### Code coverage
 
@@ -647,11 +682,10 @@ interpretation and remaining limitations.
 
 ## Roadmap
 
-- Phase 14: containerization and local Docker deployment implemented;
-  expanded CI/CD and GHCR delivery configured.
-- Consolidated Phase 14 local validation completed: 794 scenarios.
-- Verify remote CI/CD execution, GHCR publication and installation
-  from published images.
+- Phase 14: completed within the local deployment and continuous
+  delivery scope, including 794 validated local test scenarios.
+- GitHub Actions CI/CD, public GHCR publication and isolated
+  installation from published images verified.
 - Phase 15: final portfolio documentation, demonstration materials
   and presentation.
 - Future production work: public hosting, trusted certificates,

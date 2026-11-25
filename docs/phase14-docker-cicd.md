@@ -15,11 +15,14 @@ Implemented and locally verified:
 - Temporary SQL Server integration testing.
 - Production Angular and Leaflet regression tests.
 
-Configured and awaiting remote verification:
+Implemented and verified:
 
-- Expanded GitHub Actions validation jobs.
+- Expanded GitHub Actions validation jobs on Linux.
 - Commit-versioned container publication to GHCR.
-- Installation from published container images.
+- Public access to all three published image manifests.
+- Downloaded image source, revision, platform and digests.
+- Fresh isolated installation and startup from published images
+  on Windows with Docker Desktop and its Linux container engine.
 
 No public hosting environment has been provisioned.
 
@@ -101,9 +104,9 @@ pwsh -NoProfile -File ./scripts/docker/Start-LocalEnvironment.ps1
 The scripts are designed to preserve existing persistent resources.
 
 Linux-specific file ownership and permission handling has been
-implemented. The modified initialization process was revalidated
-on Windows; end-to-end execution on the GitHub-hosted Ubuntu
-runner remains pending.
+implemented. Initialization was validated on Windows and
+successfully executed on the GitHub-hosted Ubuntu runner
+during the Docker validation job.
 
 The startup process refuses to silently regenerate credentials
 when an existing SQL volume requires the original password.
@@ -419,8 +422,91 @@ downgrade or rollback procedure.
 
 Back up important data before changing application versions.
 
-GHCR package visibility and a complete installation from
-published images remain pending first-publication verification.
+Public access to all three image manifests was verified without
+using GitHub credentials.
+
+The published revision was downloaded and successfully started
+in a fresh isolated Docker environment.
+
+### Verified published revision
+
+- Date: 25 November 2026.
+- GitHub Actions workflow run: #4.
+- Branch: `main`.
+- Source commit: `13cb8c258bd09847a4e981c5d4357d4a1c045f2c`.
+- Image tag: `sha-13cb8c258bd09847a4e981c5d4357d4a1c045f2c`.
+- Platform: `linux/amd64`.
+
+### Verified registry digests
+
+| Component | Registry digest |
+| --- | --- |
+| API | `sha256:be57b5ec66aebf81a597fd7b9d527116a39e4256f0fb11e01f4f6ab09641363b` |
+| Web | `sha256:d581ca2aa16519c3e0b5b9d3b499069cec5c3d802ae8f263902d253c1d32958b` |
+| Migrations | `sha256:7ffb5c1503ce0d4a68c1b615990f9ed3f3a1ac6f8446ec7167c552bf408bffb2` |
+
+The digests returned by the registry matched those reported
+during image downloads and subsequent local image inspection.
+
+All three downloaded images contained the expected OCI source
+and revision labels and the expected Linux AMD64 platform.
+
+These digests identify the tested publication. They do not
+represent a signature or an independent security certification.
+
+### Isolated installation verification
+
+The installation test used a fresh GitHub clone of the exact
+published revision. Only the temporary project's resource
+names, proxy subnet and host HTTPS port were adapted to
+allow coexistence with the existing local environment.
+
+The original repository and deployment were not modified.
+
+Verified installation operations:
+
+- Download and preflight validation of all three GHCR images.
+- Generation of independent SQL credentials.
+- Generation and validation of new TLS material.
+- Creation of isolated networks and persistent volumes.
+- Fresh SQL Server database creation.
+- Application of all seven EF Core migrations.
+- Verification of the 48 required SQL table permissions.
+- Successful restricted SQL account authentication.
+- Interactive creation of the first Administrator.
+- Creation or verification of the three Identity roles.
+- API and Angular/Nginx container startup.
+- HTTPS, reverse proxy, CSRF and anonymous access checks.
+- Removal of temporary containers, networks and volumes.
+- Preservation of original containers, volumes and local
+  credential and TLS file fingerprints.
+
+The temporary deployment used host HTTPS port 8444.
+Application images were downloaded rather than rebuilt.
+
+### Verification scope
+
+The application startup from published images succeeded.
+
+An additional post-start inspection encountered a PowerShell
+5.1 native argument quoting error. The temporary environment
+was cleaned up correctly.
+
+A subsequent JSON-based image inspection verified all three
+cached images, including OCI labels, platform and registry
+digests.
+
+The additional running-container image ID comparison and
+final SQL row-count query were not completed because the
+temporary environment had already been removed.
+
+The seven migrations and administrator bootstrap were
+independently confirmed by their successful execution logs.
+
+This test demonstrates fresh isolated installation and
+startup on an existing Docker host. It is not a completely
+uncached host installation, a database upgrade test or a
+public production deployment.
 
 ## 12. Validation evidence
 
@@ -441,9 +527,9 @@ published images remain pending first-publication verification.
 | Production Playwright regression tests | 2 passed |
 | CI/CD Actionlint and ShellCheck validation | Passed |
 | Consolidated Phase 14 validation | Passed locally - 794 scenarios |
-| Remote GitHub Actions execution | Pending |
-| First GHCR publication | Pending |
-| Installation from published GHCR images | Pending |
+| Remote GitHub Actions execution | Passed - run #4, all five jobs |
+| First GHCR publication | Passed - three public images |
+| Installation from published GHCR images | Isolated startup passed - see verification scope |
 
 These statuses distinguish local execution evidence from
 configuration-only validation.
@@ -496,8 +582,32 @@ including the Release build, production build, temporary
 SQL resources, real browser orchestration, Docker startup,
 production browser regression and workflow linting.
 
-Remote GitHub Actions execution, GHCR delivery and published
-image installation are not yet verified.
+### Remote CI/CD validation
+
+GitHub Actions run #4 completed successfully on 25 November
+2026 for commit `13cb8c258bd09847a4e981c5d4357d4a1c045f2c`.
+
+| Job | Result | Duration |
+| --- | --- | ---: |
+| Backend - .NET 10 | Passed | 46 s |
+| Frontend - Angular 22 | Passed | 25 s |
+| Integration and E2E | Passed | 2m 29s |
+| Docker - Build and HTTPS smoke tests | Passed | 2m 21s |
+| CD - Publish Docker images to GHCR | Passed | 1m 37s |
+| **Overall workflow** | **Success** | **4m 11s** |
+
+The remote Vitest report confirmed 489 passing tests across
+41 test files.
+
+The delivery summary confirmed successful publication of
+the API, web and migration images.
+
+Public manifest access and isolated installation were
+subsequently verified as described in Section 11.
+
+The Phase 14 local deployment and continuous delivery
+objectives are complete. Public production hosting and
+additional production hardening remain outside this scope.
 
 ## 13. Deployment limitations and future hardening
 
