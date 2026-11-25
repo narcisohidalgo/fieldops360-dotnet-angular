@@ -4,7 +4,7 @@
 
 FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Phases 1-13 implemented and technically validated for local development and portfolio demonstration. The platform includes operational management, ASP.NET Core Identity security, dashboard and GIS, SignalR real-time updates and automated unit, integration and browser end-to-end testing. The Phase 13 local validation passed **789 test scenarios**. Production deployment and infrastructure hardening remain future work.
+> **Project status:** Phases 1-13 implemented and validated. Phase 14 adds a containerized HTTPS deployment, restricted SQL Server credentials, persistent storage, Docker-based integration testing and a GitHub Actions CI/CD pipeline. Local Docker deployment and consolidated validation of **794 automated test scenarios** have been completed successfully. The expanded CI/CD workflow is configured; its first remote execution and GHCR publication remain pending verification. Public production hosting is outside the current deployment scope.
 
 ## Technology stack
 
@@ -17,6 +17,10 @@ FieldOps 360 is a full-stack portfolio project for managing facilities, their eq
 | Tests | xUnit, ASP.NET Core WebApplicationFactory, EF Core/SQL Server integration tests, Vitest, Playwright (Chromium), Coverlet and V8 coverage |
 | Dashboard and GIS | Angular signals, CSS charts, Leaflet 1.9.4, OpenStreetMap tiles |
 | Real-time operations | ASP.NET Core SignalR, `@microsoft/signalr` 10.0.11, RxJS |
+| Containerization | Docker, Docker Compose, multi-stage Dockerfiles |
+| Reverse proxy | Unprivileged Nginx, HTTPS, TLS 1.2/1.3, WebSocket forwarding |
+| CI/CD | GitHub Actions, Actionlint, ShellCheck, GitHub Container Registry |
+| Deployment automation | Cross-platform PowerShell initialization and startup scripts |
 
 ## Implemented features
 
@@ -162,6 +166,13 @@ docs/
   phase11-dashboard-gis.md     # Dashboard, KPIs, geolocation and map
   phase12-realtime.md          # SignalR, notifications and live dashboard
   phase13-testing-quality.md   # Integration, E2E, coverage and quality
+  phase14-docker-cicd.md       # Containers, HTTPS, operations and delivery
+scripts/
+  docker/                     # Initialization, SQL provisioning and startup
+.github/
+  workflows/ci.yml             # CI/CD workflow
+compose.yaml                   # Local Docker environment
+.env.example                   # Credential placeholders and instructions
 ```
 
 The frontend uses feature-based folders under `src/app/features/`, Angular `HttpClient` services and lazy-loaded routes.
@@ -218,37 +229,159 @@ The frontend uses feature-based folders under `src/app/features/`, Angular `Http
 
 The Facilities and Assets controllers also provide their own create, update and activation/deactivation operations.
 
-## Continuous integration (Phase 14 groundwork)
+## Continuous integration and delivery (Phase 14)
 
-GitHub Actions is configured in `.github/workflows/ci.yml`
-to check the backend and frontend independently.
+The GitHub Actions workflow is defined in
+[.github/workflows/ci.yml](.github/workflows/ci.yml).
 
-The workflow runs on:
+Four independent validation jobs run on Linux. The delivery job
+depends on all four validation jobs.
 
-- Pushes to `main`.
-- Pull requests targeting `main`.
-- Manual execution through GitHub Actions.
-
-Two independent jobs run on Ubuntu:
-
-| Job | Validation |
+| Job | Responsibility |
 | --- | --- |
-| Backend (.NET 10) | Restore, Release build, xUnit unit tests and database-independent API smoke tests |
-| Frontend (Angular 22) | `npm ci`, Vitest tests, production build |
+| Backend | .NET restore, Release build, unit tests and database-independent API smoke tests |
+| Frontend | npm dependency installation, Angular/Vitest tests and production build |
+| Integration and E2E | Temporary SQL Server, isolated integration databases, mocked and real Playwright scenarios |
+| Docker | Container image builds, migrations, restricted SQL account, HTTPS checks and production browser regression tests |
+| Publish | Publish versioned API, frontend and migration images to GHCR after all validation jobs succeed |
 
-The workflow uses read-only repository permissions and
-does not require SQL Server, application credentials
-or production secrets. SQL Server integration tests and
-real browser orchestration are opt-in and skipped by default.
-The current CI workflow does not execute Playwright scenarios
-or enforce coverage thresholds.
+Validation runs on pushes and pull requests targeting `main`,
+as well as manual workflow execution.
 
-It performs continuous integration checks only.
-It does not deploy the application, apply migrations
-or modify a database.
+Image publication is restricted to successful pushes to `main`.
+Pull requests and manual workflow runs do not publish images.
 
-See [CI documentation](docs/ci/phase12-ci.md)
-for configuration, verification instructions and limitations.
+The workflow uses read-only repository permissions by default.
+Only the delivery job receives package write permission.
+SQL integration credentials are generated dynamically and
+temporary SQL resources are removed after execution.
+
+Published images use commit-based tags:
+
+- `ghcr.io/narcisohidalgo/fieldops360-dotnet-angular-api:sha-<commit>`
+- `ghcr.io/narcisohidalgo/fieldops360-dotnet-angular-web:sha-<commit>`
+- `ghcr.io/narcisohidalgo/fieldops360-dotnet-angular-migrations:sha-<commit>`
+
+The publication target is Linux AMD64. Images are rebuilt from
+the validated source revision and contain OCI source and revision
+metadata.
+
+This is continuous delivery to a container registry, not automatic
+deployment to a public server.
+
+**Verification status:** the expanded workflow has passed static
+Actionlint and ShellCheck validation. Its first remote execution,
+registry publication and installation from GHCR still require
+verification.
+
+See [Phase 14 Docker and CI/CD documentation](docs/phase14-docker-cicd.md)
+for architecture, operational procedures and deployment limitations.
+
+## Run with Docker (recommended for local demonstration)
+
+### Requirements
+
+- Git and Docker with the Compose plugin.
+- A Linux AMD64 container environment.
+- Windows PowerShell 5.1 or PowerShell 7.
+- Available Docker resources and local HTTPS port `8443`.
+- Internet access to download container images and build dependencies.
+
+Docker Desktop with its WSL 2 backend was used for local Windows
+validation. A host installation of .NET, Node.js or SQL Server is
+not required for the containerized application.
+
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/narcisohidalgo/fieldops360-dotnet-angular.git
+Set-Location fieldops360-dotnet-angular
+```
+
+### 2. Initialize and start the application
+
+On Windows:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File ./scripts/docker/Start-LocalEnvironment.ps1
+```
+
+With PowerShell 7:
+
+```powershell
+pwsh -NoProfile -File ./scripts/docker/Start-LocalEnvironment.ps1
+```
+
+The startup script:
+
+1. Generates independent SQL Server credentials and local TLS material.
+2. Starts SQL Server and waits for its health check.
+3. Builds and runs the database migration image.
+4. Provisions a restricted application database account.
+5. Builds the API and Angular/Nginx images.
+6. Prompts for first-administrator creation when necessary.
+7. Starts the application containers.
+8. Verifies HTTPS, the frontend and the API.
+
+Existing credentials, certificates, database records and
+administrator accounts are preserved during normal startup.
+
+Do not copy `.env.example` to `.env`: the initialization script
+generates the actual credentials automatically.
+
+### 3. Open FieldOps 360
+
+Open **https://localhost:8443**.
+
+The environment uses a locally generated self-signed certificate.
+Verify the certificate and trust it explicitly on your own
+development machine before browser use.
+
+The public certificate is stored at
+`.fieldops-local/tls/localhost.crt`.
+
+Never distribute or commit the private key
+`.fieldops-local/tls/localhost.key`.
+
+### 4. Stop the environment
+
+```powershell
+docker compose stop
+```
+
+Restart using the startup script. Persistent SQL Server data,
+TLS material and ASP.NET Core Data Protection keys are retained.
+
+Do not use `docker compose down --volumes` unless you intentionally
+want to delete the local environment and its persistent data.
+
+### Installation from published images
+
+Once the GHCR packages are published and accessible, check out
+the corresponding source revision and run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File ./scripts/docker/Start-LocalEnvironment.ps1 -PublishedCommit "<FULL_COMMIT_SHA>"
+```
+
+On Linux, use `pwsh` instead of `powershell.exe`.
+
+The installer downloads and validates all three application
+images before starting SQL Server or applying migrations.
+
+The corresponding repository configuration and provisioning
+scripts are still required, but Angular and .NET do not need
+to be compiled locally.
+
+**Status:** this installation mode is configured but has not yet
+been verified against actual published GHCR packages.
+
+The Docker database is `FieldOpsDockerDb`. It is separate from the
+native development database `FieldOpsDb`.
+
+For more information, see
+[Docker deployment and CI/CD](docs/phase14-docker-cicd.md).
+
 ## Local development
 
 ### Requirements
@@ -369,7 +502,7 @@ For real browser tests, install the frontend dependencies and Chromium
 first, return to the repository root and follow the instructions in
 [Phase 13 testing and quality documentation](docs/phase13-testing-quality.md).
 
-### Latest local validation
+### Phase 13 validation baseline
 
 Phase 13 validation completed on **25 November 2026**.
 
@@ -392,9 +525,91 @@ without detected compiler or build warnings.
 Angular initial production bundle: **382.26 kB**, with an estimated
 transfer size of **99.17 kB**.
 
+### Phase 14 Docker and production validation
+
+Phase 14 extends the existing testing strategy with:
+
+- SQL Server integration tests using a temporary Docker container.
+- Real browser E2E orchestration against Docker-based SQL Server.
+- Three additional Angular unit tests for Leaflet module interoperability.
+- Two production browser tests against Angular served by Nginx.
+- HTTPS, CSRF, anonymous access and SQL runtime permission checks.
+- Persistent database and Data Protection key verification.
+- Fresh, isolated local Docker installation verification.
+
+Targeted Phase 14 validation has passed locally.
+
+The 35 non-browser integration tests passed against temporary
+Docker SQL Server. The real browser coordinator also passed,
+and both temporary SQL environments were removed successfully.
+
+The two production browser scenarios passed against the
+containerized frontend:
+
+1. Anonymous navigation redirects to the login page.
+2. Leaflet initializes and renders an interactive facility marker.
+
+The Leaflet scenario uses controlled API responses and mocked
+map tiles. It tests the real production frontend bundle but
+does not represent an authenticated backend integration test.
+
+To rerun these two scenarios, first start the Docker environment,
+then execute:
+
+```powershell
+Set-Location src/frontend/fieldops-web
+npm.cmd ci
+npx.cmd playwright install chromium
+npm.cmd run e2e:docker
+```
+
+On Linux, use `npm` and `npx` instead of their `.cmd` variants.
+
+### Phase 14 consolidated local validation
+
+Validation completed on **25 November 2026**.
+
+| Test category | Passed |
+| --- | ---: |
+| .NET unit tests | 263 |
+| .NET integration tests | 35 |
+| Angular/Vitest unit tests | 489 |
+| Playwright with mocked API | 1 |
+| Playwright with real API and SQL Server | 4 |
+| Playwright against Docker production frontend | 2 |
+| **Total scenarios** | **794** |
+
+All selected scenarios passed.
+
+The xUnit coordinator for the four real browser scenarios
+is not counted again in the total.
+
+The backend unit and non-browser integration test reports
+confirmed zero failures and zero skipped tests.
+
+The consolidated validation also passed:
+
+- Backend Release build.
+- Angular production build.
+- Isolated SQL Server integration and browser testing.
+- Temporary database and SQL container cleanup.
+- Docker environment startup and HTTPS availability.
+- Production browser regression tests.
+- Docker Compose and CI/CD static validation.
+
+The production JavaScript and CSS files directly referenced
+by `index.html` total **382.26 kB**.
+
+This is the raw size of the referenced files, not an estimated
+compressed network transfer size.
+
+The first remote execution of the expanded CI/CD workflow,
+GHCR publication and installation from published images
+remain pending verification.
+
 ### Code coverage
 
-Backend coverage collected with Coverlet in Debug configuration:
+Historical Phase 13 backend coverage collected with Coverlet in Debug configuration:
 
 | Suite | Layer | Lines | Branches |
 | --- | --- | ---: | ---: |
@@ -410,14 +625,14 @@ percentages must not be added or averaged to represent combined coverage.
 The API and Infrastructure measurements include generated code and
 EF Core migrations where applicable.
 
-Final Angular coverage collected with Vitest and V8:
+Phase 14 Angular coverage collected with Vitest and V8:
 
-| Metric | Coverage |
-| --- | ---: |
-| Lines | 90.67% |
-| Branches | 85.98% |
-| Functions | 84.23% |
-| Statements | 90.90% |
+| Metric | Covered / Total | Coverage |
+| --- | ---: | ---: |
+| Lines | 3,718 / 4,102 | 90.63% |
+| Branches | 1,664 / 1,934 | 86.03% |
+| Functions | 530 / 629 | 84.26% |
+| Statements | 4,482 / 4,932 | 90.87% |
 
 The coverage reports are generated locally and are not committed.
 No coverage threshold is currently enforced.
@@ -432,11 +647,48 @@ interpretation and remaining limitations.
 
 ## Roadmap
 
-- Phase 14: Docker deployment, production configuration, infrastructure hardening and automated delivery (CD).
-- Extend GitHub Actions to execute database-backed integration and browser end-to-end tests.
-- Phase 15: final portfolio documentation, demonstration materials and presentation.
-- Client-side version preconditions (such as HTTP `If-Match`) and pagination for larger-scale multi-user operation.
+- Phase 14: containerization and local Docker deployment implemented;
+  expanded CI/CD and GHCR delivery configured.
+- Consolidated Phase 14 local validation completed: 794 scenarios.
+- Verify remote CI/CD execution, GHCR publication and installation
+  from published images.
+- Phase 15: final portfolio documentation, demonstration materials
+  and presentation.
+- Future production work: public hosting, trusted certificates,
+  secure secret management, monitoring, backup and recovery,
+  dependency and image security reviews.
+- Future application enhancements: explicit client-side version
+  preconditions and pagination for larger operational datasets.
 
 ## Security and deployment scope
 
-This repository is a **local-development and portfolio demonstration**, not a production-ready deployment. Authentication and role-based authorization are implemented using ASP.NET Core Identity, protected API endpoints, cookie sessions and CSRF validation. These controls do not by themselves establish production readiness. Keep secrets outside source control. Automated Identity/API integration tests and browser security scenarios are implemented. Before public deployment, complete infrastructure and HTTPS hardening, secure database transport, monitoring, operational safeguards, CI/CD integration and other production security reviews.
+FieldOps 360 is a portfolio project with a locally validated,
+containerized deployment. It is not presented as a production-ready
+public service.
+
+Implemented controls include:
+
+- ASP.NET Core Identity, server-side role authorization and CSRF protection.
+- HTTPS with TLS 1.2/1.3 and Secure authentication cookies in Production.
+- Explicitly trusted reverse-proxy configuration.
+- Non-root API and Nginx application containers.
+- Dropped Linux capabilities and no-new-privileges restrictions.
+- SQL Server without a published host port.
+- Separate administrative migration and restricted runtime database credentials.
+- Persistent ASP.NET Core Data Protection keys.
+- Credentials and private TLS material excluded from Git.
+- Isolated integration testing and automated CI/CD validation.
+
+The Docker deployment is restricted to `127.0.0.1:8443`.
+It uses SQL Server Developer Edition and a self-signed local
+TLS certificate. These choices are intended for development
+and demonstration only.
+
+Public production deployment requires additional infrastructure
+hardening, trusted TLS certificates, a production-licensed SQL
+Server configuration, validated database certificates, secure
+secret storage, Data Protection key encryption, health monitoring,
+backups, recovery procedures and further security review.
+
+The container registry delivery pipeline does not provision or
+automatically deploy to public cloud infrastructure.

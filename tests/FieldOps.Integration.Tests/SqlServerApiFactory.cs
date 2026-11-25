@@ -6,7 +6,6 @@ using FieldOps.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,22 +46,9 @@ public sealed class SqlServerApiFactory(
         var db = scope.ServiceProvider
             .GetRequiredService<FieldOpsDbContext>();
 
-        var expected = new SqlConnectionStringBuilder(
-            database.ConnectionString);
-
-        var actual = new SqlConnectionStringBuilder(
+        // Verify the isolated connection before applying migrations.
+        database.AssertIsolatedConnection(
             db.Database.GetConnectionString());
-
-        // Comprobar el aislamiento antes de ejecutar migraciones.
-        Assert.Equal(expected.DataSource, actual.DataSource);
-        Assert.Equal(expected.InitialCatalog, actual.InitialCatalog);
-
-        Assert.StartsWith(
-            "FieldOpsIntegrationTests_", actual.InitialCatalog);
-
-        Assert.True(actual.IntegratedSecurity);
-        Assert.True(string.IsNullOrEmpty(actual.FailoverPartner));
-        Assert.True(string.IsNullOrEmpty(actual.AttachDBFilename));
 
         await db.Database.MigrateAsync();
     }

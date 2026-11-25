@@ -1,5 +1,7 @@
 # GitHub Actions Continuous Integration — Phase 14 Groundwork
 
+> **Phase 14 update:** This document records the historical Phase 12 CI baseline. The workflow has since been extended with isolated SQL Server integration tests, Playwright, Docker deployment validation and GHCR delivery. See [Phase 14 Docker and CI/CD](../phase14-docker-cicd.md) for the current configuration and verification status.
+
 This CI workflow was implemented in advance of Phase 14.
 The document retains its original filename for compatibility.
 Phase 12 covers SignalR and real-time operations.

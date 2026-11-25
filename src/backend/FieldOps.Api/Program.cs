@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
 using FieldOps.Api.Security;
 using FieldOps.Api.Hubs;
 using FieldOps.Application.Assets;
@@ -22,6 +24,33 @@ var startupArgs = args
     .ToArray();
 
 var builder = WebApplication.CreateBuilder(startupArgs);
+
+// Accept forwarded headers only from the explicitly trusted reverse proxy.
+var trustedProxyAddress = builder.Configuration["ReverseProxy:KnownProxy"];
+var forwardedHeadersEnabled = !string.IsNullOrWhiteSpace(trustedProxyAddress);
+
+if (forwardedHeadersEnabled)
+{
+    if (!IPAddress.TryParse(trustedProxyAddress, out var proxyAddress))
+    {
+        throw new InvalidOperationException(
+            "ReverseProxy:KnownProxy must be a valid IP address.");
+    }
+
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders =
+            ForwardedHeaders.XForwardedFor |
+            ForwardedHeaders.XForwardedProto;
+
+        options.ForwardLimit = 1;
+        options.RequireHeaderSymmetry = true;
+
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+        options.KnownProxies.Add(proxyAddress);
+    });
+}
 
 // Register application services.
 builder.Services.AddControllersWithViews(options =>
@@ -117,6 +146,11 @@ if (bootstrapAdmin)
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
+
+if (forwardedHeadersEnabled)
+{
+    app.UseForwardedHeaders();
 }
 
 app.UseHttpsRedirection();

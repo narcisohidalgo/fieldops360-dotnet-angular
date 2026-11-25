@@ -1,4 +1,4 @@
-﻿# .NET
+# .NET
 **/bin/
 **/obj/
 .vs/
@@ -27,3 +27,6 @@
 # Operating system
 .DS_Store
 Thumbs.db
+
+# Local Docker TLS certificates
+/.fieldops-local/

@@ -72,3 +72,586 @@ jobs:
 
       - name: Build Angular production
         run: npm run build
+
+  integration:
+    name: Integration and E2E - SQL Server and Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/frontend/fieldops-web/package-lock.json
+
+      - name: Restore .NET dependencies
+        run: dotnet restore src/backend/FieldOps.slnx
+
+      - name: Build .NET Release
+        run: dotnet build src/backend/FieldOps.slnx --configuration Release --no-restore
+
+      - name: Install npm dependencies
+        working-directory: src/frontend/fieldops-web
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: src/frontend/fieldops-web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run isolated browser smoke test
+        working-directory: src/frontend/fieldops-web
+        run: npm run e2e
+
+      - name: Start isolated SQL Server
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          password="Aa1!$(openssl rand -hex 24)"
+
+          echo "::add-mask::$password"
+          printf 'FIELDOPS_TEST_SQL_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+
+          MSSQL_SA_PASSWORD="$password" docker run --detach \
+            --name fieldops-ci-sql \
+            --env ACCEPT_EULA=Y \
+            --env MSSQL_PID=Developer \
+            --env MSSQL_SA_PASSWORD \
+            --publish 127.0.0.1:15433:1433 \
+            mcr.microsoft.com/mssql/server:2022-latest
+
+      - name: Wait for SQL Server
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          export SQLCMDPASSWORD="$FIELDOPS_TEST_SQL_PASSWORD"
+
+          for attempt in $(seq 1 40); do
+            if docker exec \
+              --env SQLCMDPASSWORD \
+              fieldops-ci-sql \
+              /opt/mssql-tools18/bin/sqlcmd \
+              -S localhost -U sa -C -b -l 3 \
+              -Q "SELECT 1;" >/dev/null 2>&1; then
+
+              echo "SQL Server is ready."
+              exit 0
+            fi
+
+            echo "Waiting for SQL Server: attempt $attempt"
+            sleep 3
+          done
+
+          echo "::error::SQL Server did not become ready."
+          exit 1
+
+      - name: Run SQL Server integration tests
+        env:
+          FIELDOPS_RUN_SQL_TESTS: "1"
+          FIELDOPS_RUN_E2E: "0"
+        shell: bash
+        run: |
+          dotnet test tests/FieldOps.Integration.Tests/FieldOps.Integration.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --filter "FullyQualifiedName!~RealBrowserIntegrationTests" \
+            --verbosity minimal \
+            --logger "trx;LogFileName=integration.trx" \
+            --results-directory "$RUNNER_TEMP/fieldops-tests"
+
+      - name: Run real Playwright E2E tests
+        env:
+          FIELDOPS_RUN_SQL_TESTS: "1"
+          FIELDOPS_RUN_E2E: "1"
+          FIELDOPS_E2E_ROOT: ${{ github.workspace }}
+        shell: bash
+        run: |
+          dotnet test tests/FieldOps.Integration.Tests/FieldOps.Integration.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --filter "FullyQualifiedName~RealBrowserIntegrationTests.RealBrowserSuite" \
+            --logger "console;verbosity=detailed" \
+            --logger "trx;LogFileName=e2e.trx" \
+            --results-directory "$RUNNER_TEMP/fieldops-tests"
+
+      - name: Verify test execution without skips
+        shell: bash
+        run: |
+          python3 - "$RUNNER_TEMP/fieldops-tests" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          directory = Path(sys.argv[1])
+
+          suites = (
+              ("integration.trx", 35),
+              ("e2e.trx", 1),
+          )
+
+          for filename, minimum_tests in suites:
+              root = ET.parse(directory / filename).getroot()
+              counters = root.find(".//{*}Counters")
+
+              if counters is None:
+                  raise SystemExit(f"{filename}: missing test counters")
+
+              total = int(counters.get("total", "0"))
+              executed = int(counters.get("executed", "0"))
+              passed = int(counters.get("passed", "0"))
+              failed = int(counters.get("failed", "0"))
+              not_executed = int(counters.get("notExecuted", "0"))
+
+              print(
+                  f"{filename}: total={total}, executed={executed}, "
+                  f"passed={passed}, failed={failed}, "
+                  f"notExecuted={not_executed}"
+              )
+
+              if (
+                  total < minimum_tests
+                  or executed != total
+                  or passed != total
+                  or failed != 0
+                  or not_executed != 0
+              ):
+                  raise SystemExit(f"{filename}: test verification failed")
+
+          print("All required tests executed successfully.")
+          PY
+
+      - name: Verify temporary database cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          export SQLCMDPASSWORD="$FIELDOPS_TEST_SQL_PASSWORD"
+
+          result="$(docker exec \
+            --env SQLCMDPASSWORD \
+            fieldops-ci-sql \
+            /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost -U sa -C -b -h -1 -W \
+            -Q "SET NOCOUNT ON; SELECT CONCAT('RemainingTestDatabases=', COUNT(*)) FROM sys.databases WHERE name LIKE 'FieldOpsIntegrationTests[_]%';")"
+
+          printf '%s\n' "$result"
+
+          printf '%s\n' "$result" | tr -d '\r' | grep -Fxq 'RemainingTestDatabases=0'
+
+          echo "All temporary test databases removed."
+
+      - name: Remove isolated SQL Server
+        if: always()
+        shell: bash
+        run: |
+          if docker container inspect fieldops-ci-sql >/dev/null 2>&1; then
+            docker rm -f -v fieldops-ci-sql
+          fi
+
+  docker:
+    name: Docker - Build and HTTPS smoke tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Verify Docker environment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker version
+          docker compose version
+          pwsh --version
+
+          test ! -e .env
+          test ! -e .fieldops-local
+
+      - name: Initialize isolated Docker environment
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          & ./scripts/docker/Initialize-LocalEnvironment.ps1
+
+          foreach ($line in Get-Content -LiteralPath .env) {
+              if ($line -match '^FIELDOPS_SQL_(SA|APP)_PASSWORD=(.+)$') {
+                  Write-Host "::add-mask::$($Matches[2])"
+              }
+          }
+
+      - name: Build Docker images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          docker compose --profile tools config --quiet
+          docker compose build api web migrate
+
+      - name: Start SQL Server
+        shell: bash
+        run: |
+          docker compose up --detach --wait \
+            --wait-timeout 180 sqlserver
+
+      - name: Apply database migrations
+        shell: bash
+        run: |
+          docker compose run --rm --no-deps --pull never -T migrate
+
+      - name: Provision restricted SQL runtime account
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          & ./scripts/docker/Initialize-DatabaseRuntime.ps1
+
+      - name: Start production containers
+        shell: bash
+        run: |
+          docker compose up --detach --no-deps --no-build --pull never \
+            --wait --wait-timeout 120 api web
+
+      - name: Verify HTTPS and production security
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          certificate=".fieldops-local/tls/localhost.crt"
+          base_url="https://localhost:8443"
+          smoke_dir="$(mktemp -d)"
+
+          trap 'rm -rf "$smoke_dir"' EXIT
+
+          request() {
+            curl --silent --show-error \
+              --noproxy '*' \
+              --cacert "$certificate" \
+              --resolve localhost:8443:127.0.0.1 \
+              --connect-timeout 5 \
+              --max-time 15 \
+              "$@"
+          }
+
+          ready=0
+
+          for attempt in $(seq 1 30); do
+            if request --fail \
+              "$base_url/api/system/status" \
+              --output "$smoke_dir/status.json"; then
+
+              ready=1
+              break
+            fi
+
+            echo "Waiting for HTTPS availability: attempt $attempt/30"
+            sleep 2
+          done
+
+          test "$ready" -eq 1
+
+          request --fail "$base_url/" \
+            --output "$smoke_dir/index.html"
+
+          request --fail "$base_url/facilities" \
+            --output "$smoke_dir/facilities.html"
+
+          request --fail "$base_url/api/auth/csrf" \
+            --dump-header "$smoke_dir/csrf.headers" \
+            --output "$smoke_dir/csrf.json"
+
+          for endpoint in /api/auth/me /api/facilities; do
+            status="$(request \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "$base_url$endpoint")"
+
+            test "$status" = "401"
+
+            echo "Anonymous access rejected: $endpoint"
+          done
+
+          python3 - "$smoke_dir" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          directory = Path(sys.argv[1])
+
+          status = json.loads(
+              (directory / "status.json").read_text()
+          )
+
+          assert status["application"] == "FieldOps 360"
+          assert status["status"] == "online"
+          assert status["framework"] == ".NET 10"
+
+          for filename in ("index.html", "facilities.html"):
+              assert "<app-root" in (
+                  directory / filename
+              ).read_text()
+
+          csrf = json.loads(
+              (directory / "csrf.json").read_text()
+          )
+
+          assert csrf["requestToken"]
+
+          headers = (
+              directory / "csrf.headers"
+          ).read_text().lower().splitlines()
+
+          cookies = [
+              header for header in headers
+              if header.startswith("set-cookie:")
+              and "fieldops.antiforgery=" in header
+          ]
+
+          assert len(cookies) == 1
+
+          attributes = {
+              part.strip()
+              for part in cookies[0].split(";")[1:]
+          }
+
+          assert "secure" in attributes
+          assert "httponly" in attributes
+          assert "samesite=lax" in attributes
+
+          print("Angular production frontend verified.")
+          print("Angular SPA fallback verified.")
+          print("Backend status verified.")
+          print("HTTPS reverse proxy verified.")
+          print("CSRF cookie security verified.")
+          PY
+
+          test "$(docker compose exec -T api id -u)" = "1654"
+          test "$(docker compose exec -T web id -u)" = "101"
+
+          test "$(docker compose port web 8443)" = "127.0.0.1:8443"
+
+          docker compose exec -T web nginx -t
+
+          echo "Non-root application containers verified."
+          echo "Localhost-only HTTPS port verified."
+
+      - name: Setup Node.js 24 for production browser tests
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/frontend/fieldops-web/package-lock.json
+
+      - name: Install production browser test dependencies
+        working-directory: src/frontend/fieldops-web
+        run: npm ci
+
+      - name: Install Chromium for production browser tests
+        working-directory: src/frontend/fieldops-web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Docker production browser tests
+        working-directory: src/frontend/fieldops-web
+        run: npm run e2e:docker
+
+      - name: Verify database migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          result="$(docker compose exec -T sqlserver sh -c '
+            export SQLCMDPASSWORD="$MSSQL_SA_PASSWORD"
+            exec /opt/mssql-tools18/bin/sqlcmd \
+              -S localhost -U sa -C -b \
+              -d FieldOpsDockerDb -h -1 -W \
+              -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM dbo.__EFMigrationsHistory;"
+          ')"
+
+          migration_count="$(printf '%s' "$result" | tr -d '[:space:]')"
+
+          test "$migration_count" = "7"
+
+          echo "All seven database migrations verified."
+
+      - name: Show Docker service status
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f .env ]]; then
+            docker compose ps
+          fi
+
+      - name: Remove isolated Docker environment
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          trap 'rm -f .env; rm -rf .fieldops-local' EXIT
+
+          if [[ -f .env ]]; then
+            docker compose --profile tools down \
+              --volumes --remove-orphans
+          fi
+
+  publish:
+    name: CD - Publish Docker images to GHCR
+    needs:
+      - backend
+      - frontend
+      - integration
+      - docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      packages: write
+
+    env:
+      IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+    steps:
+      - name: Checkout validated revision
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Verify clean build context
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+          test ! -e .env
+          test ! -e .fieldops-local
+
+          echo "Validated source revision: $GITHUB_SHA"
+
+      - name: Build versioned Docker images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          prefix="${IMAGE_PREFIX,,}"
+          tag="sha-${GITHUB_SHA}"
+          repository_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+
+          for component in api web migrations; do
+            case "$component" in
+              api)
+                context="src/backend"
+                target="runtime"
+                ;;
+              web)
+                context="src/frontend/fieldops-web"
+                target="runtime"
+                ;;
+              migrations)
+                context="src/backend"
+                target="migrations"
+                ;;
+            esac
+
+            image="${prefix}-${component}:${tag}"
+
+            docker build \
+              --platform linux/amd64 \
+              --file "$context/Dockerfile" \
+              --target "$target" \
+              --label "org.opencontainers.image.source=$repository_url" \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --label "org.opencontainers.image.title=FieldOps 360 - $component" \
+              --tag "$image" \
+              "$context"
+
+            docker image inspect "$image" >/dev/null
+
+            echo "Image built: $image"
+          done
+
+      - name: Authenticate to GitHub Container Registry
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          printf '%s' "$GHCR_TOKEN" |
+            docker login ghcr.io \
+              --username "$GITHUB_ACTOR" \
+              --password-stdin
+
+      - name: Publish versioned Docker images
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          prefix="${IMAGE_PREFIX,,}"
+          tag="sha-${GITHUB_SHA}"
+
+          for component in api web migrations; do
+            image="${prefix}-${component}:${tag}"
+
+            docker push "$image"
+
+            docker buildx imagetools inspect "$image"
+
+            echo "Published and verified: $image"
+          done
+
+      - name: Write delivery summary
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          prefix="${IMAGE_PREFIX,,}"
+          tag="sha-${GITHUB_SHA}"
+
+          {
+            echo "## FieldOps 360 - Continuous Delivery"
+            echo ""
+            echo "All required CI jobs passed."
+            echo ""
+            echo "Source revision: $GITHUB_SHA"
+            echo ""
+            echo "| Component | Container image |"
+            echo "| --- | --- |"
+
+            for component in api web migrations; do
+              printf '| %s | %s |\n' \
+                "$component" \
+                "${prefix}-${component}:${tag}"
+            done
+
+            echo ""
+            echo "Platform: linux/amd64"
+            echo ""
+            echo "Images published to GitHub Container Registry."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Logout from GitHub Container Registry
+        if: always()
+        shell: bash
+        run: docker logout ghcr.io

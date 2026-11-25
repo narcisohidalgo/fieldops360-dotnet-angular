@@ -1,5 +1,7 @@
 # Phase 13 — Integration Testing and Code Quality
 
+> **Phase 14 update:** The Phase 13 test results and coverage figures documented here are historical validation evidence. Phase 14 introduces Docker-based SQL integration testing, additional Leaflet interoperability tests and production browser regression tests. See [Phase 14 Docker and CI/CD](phase14-docker-cicd.md) for the extended strategy and current verification status.
+
 ## Overview
 
 Phase 13 extends FieldOps 360 with automated verification

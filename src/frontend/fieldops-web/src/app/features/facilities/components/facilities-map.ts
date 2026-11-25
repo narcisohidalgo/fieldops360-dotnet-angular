@@ -21,6 +21,24 @@ import { Facility } from '../models/facility.model';
 
 type LeafletModule = typeof import('leaflet');
 
+export function resolveLeafletModule(
+  module: LeafletModule | { default: LeafletModule }
+): LeafletModule {
+  // Support both named exports and CommonJS default interop.
+  if ('map' in module && typeof module.map === 'function') {
+    return module;
+  }
+
+  if (
+    'default' in module &&
+    typeof module.default?.map === 'function'
+  ) {
+    return module.default;
+  }
+
+  throw new TypeError('Leaflet map factory is unavailable.');
+}
+
 export type LocatedFacility = Facility & {
   latitude: number;
   longitude: number;
@@ -97,9 +115,11 @@ export class FacilitiesMap {
 
   private async initialize(): Promise<void> {
     try {
-      const leaflet = await import('leaflet');
+      const leafletModule = await import('leaflet');
 
       if (this.destroyRef.destroyed) return;
+
+      const leaflet = resolveLeafletModule(leafletModule);
 
       this.leaflet = leaflet;
 
@@ -119,8 +139,10 @@ export class FacilitiesMap {
       this.markers = leaflet.layerGroup().addTo(this.map);
 
       this.updateMarkers(this.facilities());
-    } catch {
+    } catch (error) {
       if (!this.destroyRef.destroyed) {
+        console.error('Facilities map initialization failed.', error);
+
         this.errorMessage.set(
           'No se pudo inicializar el mapa interactivo.'
         );

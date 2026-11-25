@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Facility } from '../models/facility.model';
-import { getMappableFacilities } from './facilities-map';
+import { getMappableFacilities, resolveLeafletModule } from './facilities-map';
 
 describe('FacilitiesMap geolocation', () => {
   const base: Facility = {
@@ -47,5 +47,26 @@ describe('FacilitiesMap geolocation', () => {
       { ...base, latitude: 37, longitude: -181 },
       { ...base, latitude: Number.NaN, longitude: 0 }
     ])).toEqual([]);
+  });
+});
+
+describe('FacilitiesMap Leaflet module interoperability', () => {
+  const leaflet = {
+    map: () => undefined
+  } as unknown as typeof import('leaflet');
+
+  it('supports named Leaflet exports', () => {
+    expect(resolveLeafletModule(leaflet)).toBe(leaflet);
+  });
+
+  it('supports the default export produced by the production bundler', () => {
+    expect(resolveLeafletModule({ default: leaflet })).toBe(leaflet);
+  });
+
+  it('rejects a module without a Leaflet map factory', () => {
+    const invalidModule = {} as typeof import('leaflet');
+
+    expect(() => resolveLeafletModule(invalidModule))
+      .toThrow('Leaflet map factory is unavailable.');
   });
 });

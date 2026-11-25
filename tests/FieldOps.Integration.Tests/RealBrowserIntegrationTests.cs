@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using FieldOps.Api.Security;
 using FieldOps.Domain.Entities;
-using Microsoft.Data.SqlClient;
 using Xunit.Abstractions;
 
 namespace FieldOps.Integration.Tests;
@@ -38,18 +37,9 @@ public sealed class RealBrowserIntegrationTests(
         await using var database =
             await SqlServerTestDatabase.CreateAsync();
 
-        // Impedir cualquier conexion a la base habitual.
-        var connection = new SqlConnectionStringBuilder(
+        // Prevent connections to the regular application database.
+        database.AssertIsolatedConnection(
             database.ConnectionString);
-
-        Assert.StartsWith(
-            "FieldOpsIntegrationTests_",
-            connection.InitialCatalog);
-
-        Assert.Equal("(local)", connection.DataSource);
-        Assert.True(connection.IntegratedSecurity);
-        Assert.True(string.IsNullOrEmpty(connection.AttachDBFilename));
-        Assert.True(string.IsNullOrEmpty(connection.FailoverPartner));
 
         await using var factory =
             new SqlServerApiFactory(database);
