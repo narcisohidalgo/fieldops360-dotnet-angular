@@ -140,6 +140,7 @@ src/
 tests/
   FieldOps.Application.Tests/  # xUnit tests
 docs/
+  ci/                          # GitHub Actions CI documentation
   database/                    # SQL database documentation
   security/                    # Authentication, authorization and security
   phase11-dashboard-gis.md     # Dashboard, KPIs, geolocation and map
@@ -199,6 +200,34 @@ The frontend uses feature-based folders under `src/app/features/`, Angular `Http
 
 The Facilities and Assets controllers also provide their own create, update and activation/deactivation operations.
 
+## Continuous integration (Phase 12)
+
+GitHub Actions is configured in `.github/workflows/ci.yml`
+to check the backend and frontend independently.
+
+The workflow runs on:
+
+- Pushes to `main`.
+- Pull requests targeting `main`.
+- Manual execution through GitHub Actions.
+
+Two independent jobs run on Ubuntu:
+
+| Job | Validation |
+| --- | --- |
+| Backend (.NET 10) | Restore, Release build, xUnit tests |
+| Frontend (Angular 22) | `npm ci`, Vitest tests, production build |
+
+The workflow uses read-only repository permissions and
+does not require SQL Server, application credentials
+or production secrets.
+
+It performs continuous integration checks only.
+It does not deploy the application, apply migrations
+or modify a database.
+
+See [Phase 12 CI documentation](docs/ci/phase12-ci.md)
+for configuration, verification instructions and limitations.
 ## Local development
 
 ### Requirements
@@ -304,7 +333,7 @@ Authentication and role-based authorization are implemented. Dedicated automated
 
 - Automated integration/end-to-end tests, including database and API paths.
 - Dedicated automated Identity/API integration tests and production deployment hardening.
-- Docker deployment and GitHub Actions CI/CD.
+- Docker deployment and automated delivery (CD); GitHub Actions CI is covered in Phase 12.
 - Client-side version preconditions (such as HTTP `If-Match`) and pagination for larger-scale multi-user operation.
 
 ## Security and deployment scope
