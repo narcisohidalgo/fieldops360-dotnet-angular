@@ -1,4 +1,8 @@
-# Phase 12 — GitHub Actions Continuous Integration
+# GitHub Actions Continuous Integration — Phase 14 Groundwork
+
+This CI workflow was implemented in advance of Phase 14.
+The document retains its original filename for compatibility.
+Phase 12 covers SignalR and real-time operations.
 
 ## Goal
 

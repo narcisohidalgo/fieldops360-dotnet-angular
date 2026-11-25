@@ -10,6 +10,7 @@ import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
+import { RealtimeService } from '../../../core/services/realtime.service';
 
 import { Asset } from '../../assets/models/asset.model';
 import { AssetService } from '../../assets/services/asset.service';
@@ -103,6 +104,7 @@ export class IncidentsPage implements OnInit {
     )
   );
 
+  private readonly realtime = inject(RealtimeService);
   private readonly incidentService = inject(IncidentService);
   private readonly facilityService = inject(FacilityService);
   private readonly assetService = inject(AssetService);
@@ -111,6 +113,14 @@ export class IncidentsPage implements OnInit {
   private loadSequence = 0;
 
   ngOnInit(): void {
+    this.realtime.incidentsChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        // Recargar usando los filtros actuales.
+        // loadSequence evita aplicar respuestas HTTP obsoletas.
+        this.loadIncidents();
+      });
+
     this.loadIncidents();
   }
 

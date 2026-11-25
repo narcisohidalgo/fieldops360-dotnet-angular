@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
+import { RealtimeService } from '../../../core/services/realtime.service';
 
 import { Asset } from '../../assets/models/asset.model';
 import { AssetService } from '../../assets/services/asset.service';
@@ -157,6 +158,7 @@ export class WorkOrdersPage implements OnInit {
     )
   );
 
+  private readonly realtime = inject(RealtimeService);
   private readonly workOrderService = inject(WorkOrderService);
   private readonly facilityService = inject(FacilityService);
   private readonly assetService = inject(AssetService);
@@ -185,6 +187,14 @@ export class WorkOrdersPage implements OnInit {
   private loadSequence = 0;
 
   ngOnInit(): void {
+    this.realtime.workOrdersChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        // Reutiliza los filtros actuales y la proteccion
+        // frente a respuestas HTTP antiguas de loadOrders().
+        this.loadOrders();
+      });
+
     this.loadOrders();
   }
 

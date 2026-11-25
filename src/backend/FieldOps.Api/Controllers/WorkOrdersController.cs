@@ -1,4 +1,5 @@
 using FieldOps.Api.Security;
+using FieldOps.Api.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using FieldOps.Application.WorkOrders;
 using FieldOps.Domain.Enums;
@@ -13,10 +14,14 @@ namespace FieldOps.Api.Controllers;
 public sealed class WorkOrdersController : ControllerBase
 {
     private readonly IWorkOrderService _service;
+    private readonly IOperationsEventPublisher _events;
 
-    public WorkOrdersController(IWorkOrderService service)
+    public WorkOrdersController(
+        IWorkOrderService service,
+        IOperationsEventPublisher events)
     {
         _service = service;
+        _events = events;
     }
 
     // GET /api/work-orders
@@ -80,6 +85,8 @@ public sealed class WorkOrdersController : ControllerBase
         {
             var order = await _service.CreateAsync(
                 command, cancellationToken);
+
+            await _events.WorkOrdersChangedAsync();
 
             return CreatedAtAction(
                 nameof(GetById),
@@ -191,6 +198,8 @@ public sealed class WorkOrdersController : ControllerBase
             {
                 return NotFound();
             }
+
+            await _events.WorkOrdersChangedAsync();
 
             return NoContent();
         }

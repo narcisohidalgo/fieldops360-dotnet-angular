@@ -1,4 +1,5 @@
 using FieldOps.Api.Security;
+using FieldOps.Api.Hubs;
 using FieldOps.Application.Assets;
 using FieldOps.Application.Incidents;
 using FieldOps.Application.Facilities;
@@ -31,6 +32,12 @@ builder.Services.AddControllersWithViews(options =>
         new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
 });
 builder.Services.AddOpenApi();
+
+// SignalR: conexiones autenticadas para eventos operativos.
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<
+    IOperationsEventPublisher,
+    OperationsEventPublisher>();
 
 // Register Infrastructure and Entity Framework Core.
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -118,5 +125,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Endpoint SignalR. La autorizacion se define en OperationsHub.
+app.MapHub<OperationsHub>(
+    OperationsHub.Route,
+    options => options.CloseOnAuthenticationExpiration = true);
 
 app.Run();

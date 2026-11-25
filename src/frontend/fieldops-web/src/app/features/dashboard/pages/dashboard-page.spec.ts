@@ -5,12 +5,16 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { Subject } from 'rxjs';
+import { RealtimeService } from '../../../core/services/realtime.service';
 
 import { DashboardSummary } from '../models/dashboard-summary.model';
 import { DashboardPage } from './dashboard-page';
 
 describe('DashboardPage', () => {
   let httpMock: HttpTestingController;
+  let workOrderEvents: Subject<void>;
+  let incidentEvents: Subject<void>;
 
   const summary: DashboardSummary = {
     facilities: { total: 3, active: 2 },
@@ -29,12 +33,22 @@ describe('DashboardPage', () => {
   };
 
   beforeEach(async () => {
+    workOrderEvents = new Subject<void>();
+    incidentEvents = new Subject<void>();
+
     await TestBed.configureTestingModule({
       imports: [DashboardPage],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([])
+        provideRouter([]),
+        {
+          provide: RealtimeService,
+          useValue: {
+            workOrdersChanged$: workOrderEvents.asObservable(),
+            incidentsChanged$: incidentEvents.asObservable()
+          }
+        }
       ]
     }).compileComponents();
 
@@ -45,6 +59,153 @@ describe('DashboardPage', () => {
     httpMock.verify();
   });
 
+  it('actualiza las ordenes al recibir WorkOrdersChanged', () => {
+    const fixture = TestBed.createComponent(DashboardPage);
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/dashboard/summary').flush(summary);
+
+    workOrderEvents.next();
+
+    httpMock.expectOne('/api/dashboard/summary').flush({
+      ...summary,
+      workOrders: {
+        ...summary.workOrders,
+        total: 6,
+        planned: 3
+      }
+    });
+
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll(
+      '.dashboard-card'
+    ) as NodeListOf<HTMLElement>;
+
+    expect(cards[4].textContent).toContain('6');
+    expect(cards[4].textContent).toContain('3 planificadas');
+
+    const charts = fixture.nativeElement.querySelectorAll(
+      '.chart-panel'
+    ) as NodeListOf<HTMLElement>;
+
+    expect(charts[1].textContent).toContain('6 órdenes');
+  });
+
+  it('actualiza las incidencias al recibir IncidentsChanged', () => {
+    const fixture = TestBed.createComponent(DashboardPage);
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/dashboard/summary').flush(summary);
+
+    incidentEvents.next();
+
+    httpMock.expectOne('/api/dashboard/summary').flush({
+      ...summary,
+      incidents: {
+        ...summary.incidents,
+        total: 3,
+        open: 2
+      }
+    });
+
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll(
+      '.dashboard-card'
+    ) as NodeListOf<HTMLElement>;
+
+    expect(cards[3].textContent).toContain('3');
+    expect(cards[3].textContent).toContain('2 abiertas');
+
+    const charts = fixture.nativeElement.querySelectorAll(
+      '.chart-panel'
+    ) as NodeListOf<HTMLElement>;
+
+    expect(charts[0].textContent).toContain('3 incidencias');
+  });
+
+  it('ignora respuestas HTTP anteriores a un evento reciente', () => {
+    const fixture = TestBed.createComponent(DashboardPage);
+    fixture.detectChanges();
+
+    const firstRequest = httpMock.expectOne(
+      '/api/dashboard/summary'
+    );
+
+    workOrderEvents.next();
+
+    const latestRequest = httpMock.expectOne(
+      '/api/dashboard/summary'
+    );
+
+    latestRequest.flush({
+      ...summary,
+      workOrders: {
+        ...summary.workOrders,
+        total: 7
+      }
+    });
+
+    // Respuesta antigua que llega despues de la nueva.
+    firstRequest.flush(summary);
+
+    fixture.detectChanges();
+
+    const cards = fixture.nativeElement.querySelectorAll(
+      '.dashboard-card'
+    ) as NodeListOf<HTMLElement>;
+
+    expect(cards[4].textContent).toContain('7');
+  });
+
+  it('ignora errores obsoletos despues de una carga correcta', () => {
+    const fixture = TestBed.createComponent(DashboardPage);
+    fixture.detectChanges();
+
+    const firstRequest = httpMock.expectOne(
+      '/api/dashboard/summary'
+    );
+
+    incidentEvents.next();
+
+    const latestRequest = httpMock.expectOne(
+      '/api/dashboard/summary'
+    );
+
+    latestRequest.flush(summary);
+
+    firstRequest.flush(
+      { title: 'Old server error' },
+      { status: 503, statusText: 'Service Unavailable' }
+    );
+
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(
+      element.querySelectorAll('.dashboard-card').length
+    ).toBe(6);
+
+    expect(
+      element.querySelector('[role="alert"]')
+    ).toBeNull();
+  });
+
+  it('deja de escuchar eventos al abandonar el dashboard', () => {
+    const fixture = TestBed.createComponent(DashboardPage);
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/dashboard/summary').flush(summary);
+
+    fixture.destroy();
+
+    workOrderEvents.next();
+    incidentEvents.next();
+
+    httpMock.expectNone('/api/dashboard/summary');
+  });
   it('muestra el estado de carga', () => {
     const fixture = TestBed.createComponent(DashboardPage);
     fixture.detectChanges();

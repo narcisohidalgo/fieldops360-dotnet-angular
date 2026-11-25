@@ -1,4 +1,5 @@
 using FieldOps.Api.Security;
+using FieldOps.Api.Hubs;
 using FieldOps.Application.Technicians;
 using FieldOps.Application.WorkOrders;
 using FieldOps.Infrastructure.Identity;
@@ -21,15 +22,18 @@ public sealed class MyWorkOrdersController : ControllerBase
     private readonly UserManager<FieldOpsUser> _users;
     private readonly ITechnicianService _technicians;
     private readonly IWorkOrderService _orders;
+    private readonly IOperationsEventPublisher _events;
 
     public MyWorkOrdersController(
         UserManager<FieldOpsUser> users,
         ITechnicianService technicians,
-        IWorkOrderService orders)
+        IWorkOrderService orders,
+        IOperationsEventPublisher events)
     {
         _users = users;
         _technicians = technicians;
         _orders = orders;
+        _events = events;
     }
 
     // GET /api/my/work-orders
@@ -134,7 +138,14 @@ public sealed class MyWorkOrdersController : ControllerBase
             var changed = await operation(
                 id, cancellationToken);
 
-            return changed ? NoContent() : NotFound();
+            if (!changed)
+            {
+                return NotFound();
+            }
+
+            await _events.WorkOrdersChangedAsync();
+
+            return NoContent();
         }
         catch (WorkOrderConcurrencyException)
         {

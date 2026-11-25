@@ -4,7 +4,7 @@
 
 FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Phases 1-11 implemented and technically validated for local development and portfolio demonstration. Facilities, Assets, Incidents, Technicians, Work Orders, ASP.NET Core Identity authentication, role-based authorization and user management are implemented. Production deployment hardening and further integration testing remain future work.
+> **Project status:** Phases 1-12 implemented and technically validated for local development and portfolio demonstration. Facilities, Assets, Incidents, Technicians, Work Orders, ASP.NET Core Identity authentication, role-based authorization and user management are implemented. Production deployment hardening and further integration testing remain future work.
 
 ## Technology stack
 
@@ -16,6 +16,7 @@ FieldOps 360 is a full-stack portfolio project for managing facilities, their eq
 | Architecture | Clean Architecture (Domain, Application, Infrastructure, API) |
 | Tests | xUnit (.NET), Vitest (Angular) |
 | Dashboard and GIS | Angular signals, CSS charts, Leaflet 1.9.4, OpenStreetMap tiles |
+| Real-time operations | ASP.NET Core SignalR, `@microsoft/signalr` 10.0.11, RxJS |
 
 ## Implemented features
 
@@ -60,6 +61,20 @@ See [Phase 10 security design](docs/security/phase10-security-design.md) for imp
 See [Phase 11 technical documentation](docs/phase11-dashboard-gis.md)
 for implementation details, verification and limitations.
 
+### Real-time operations and notifications (Phase 12)
+
+- Broadcast generic work-order and incident change events with ASP.NET Core SignalR.
+- Refresh authorized Angular lists while preserving the current filters.
+- Automatically refresh dashboard KPIs and status charts.
+- Show in-memory operational notifications for Administrator and Supervisor.
+- Support unread counts, notification actions and navigation to the relevant module.
+- Recover SignalR connections after failures, without creating false notifications.
+- Continue using REST authorization as the source of truth for operational data.
+- Keep SignalR notifications free of private entity payloads.
+- Require no additional SQL Server tables or migrations.
+
+See [Phase 12 technical documentation](docs/phase12-realtime.md)
+for architecture, security, verification and limitations.
 ### Facilities
 
 - List facilities and retrieve an individual facility.
@@ -144,6 +159,7 @@ docs/
   database/                    # SQL database documentation
   security/                    # Authentication, authorization and security
   phase11-dashboard-gis.md     # Dashboard, KPIs, geolocation and map
+  phase12-realtime.md          # SignalR, notifications and live dashboard
 ```
 
 The frontend uses feature-based folders under `src/app/features/`, Angular `HttpClient` services and lazy-loaded routes.
@@ -200,7 +216,7 @@ The frontend uses feature-based folders under `src/app/features/`, Angular `Http
 
 The Facilities and Assets controllers also provide their own create, update and activation/deactivation operations.
 
-## Continuous integration (Phase 12)
+## Continuous integration (Phase 14 groundwork)
 
 GitHub Actions is configured in `.github/workflows/ci.yml`
 to check the backend and frontend independently.
@@ -226,7 +242,7 @@ It performs continuous integration checks only.
 It does not deploy the application, apply migrations
 or modify a database.
 
-See [Phase 12 CI documentation](docs/ci/phase12-ci.md)
+See [CI documentation](docs/ci/phase12-ci.md)
 for configuration, verification instructions and limitations.
 ## Local development
 
@@ -290,7 +306,7 @@ npm.cmd start
 
 On Windows PowerShell, use `npm.cmd` to avoid restrictions affecting `npm.ps1`. On macOS/Linux, use `npm`.
 
-Angular runs at `http://localhost:4200` and forwards `/api/**` requests to the backend at port `5080` via the development proxy.
+Angular runs at `http://localhost:4200` and forwards `/api/**` and `/hubs/**` requests to the backend at port `5080` through the development proxy, including WebSocket upgrades.
 
 ### Pages
 
@@ -321,9 +337,9 @@ npm.cmd test -- --watch=false
 npm.cmd run build
 ```
 
-Following the Phase 11 local audit (25 November 2026), **263 .NET/xUnit tests and 398 Angular/Vitest tests were verified (661 total)**. The .NET Release build and Angular production build succeeded.
+Following the Phase 12 local audit (25 November 2026), **263 .NET/xUnit tests and 451 Angular/Vitest tests passed (714 total)**. The .NET Release build completed with zero warnings and zero errors, and the Angular production build succeeded.
 
-The full Angular suite initially passed 397 of 398 tests. One outdated navigation assertion was corrected, and all eight tests in the affected file passed when rerun. The remaining 390 tests had already passed in the full run. Leaflet 1.9.4 produces a non-blocking CommonJS optimization warning during the Angular production build.
+All 40 Angular test files passed in the full regression run. The production build reports two non-blocking warnings: the application stylesheet exceeds its warning budget by 194 bytes, and Leaflet 1.9.4 produces a CommonJS optimization warning. Both are retained for review during Phase 13.
 
 Work Order REST operations passed 38 functional HTTP checks. An additional local concurrent-request check returned one HTTP 201 Created and one HTTP 409 Conflict for two requests using the same work order code; a further duplicate returned HTTP 409, and exactly one matching record was persisted. This validates the observed HTTP behavior but does not specifically prove that SQL Server's unique-index exception handler was exercised.
 
@@ -333,7 +349,7 @@ Authentication and role-based authorization are implemented. Dedicated automated
 
 - Automated integration/end-to-end tests, including database and API paths.
 - Dedicated automated Identity/API integration tests and production deployment hardening.
-- Docker deployment and automated delivery (CD); GitHub Actions CI is covered in Phase 12.
+- Docker deployment and automated delivery (CD); GitHub Actions CI is already configured as groundwork for Phase 14.
 - Client-side version preconditions (such as HTTP `If-Match`) and pagination for larger-scale multi-user operation.
 
 ## Security and deployment scope

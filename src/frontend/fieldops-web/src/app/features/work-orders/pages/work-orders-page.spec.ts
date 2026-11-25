@@ -5,6 +5,8 @@ import {
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { Subject } from 'rxjs';
+import { RealtimeService } from '../../../core/services/realtime.service';
 
 import { Asset } from '../../assets/models/asset.model';
 import { Facility } from '../../facilities/models/facility.model';
@@ -23,6 +25,7 @@ import { WorkOrdersPage } from './work-orders-page';
 
 describe('WorkOrdersPage', () => {
   let httpMock: HttpTestingController;
+  let realtimeEvents: Subject<void>;
 
   const facilityId = '00000000-0000-0000-0000-000000000001';
   const otherFacilityId = '00000000-0000-0000-0000-000000000002';
@@ -191,11 +194,19 @@ describe('WorkOrdersPage', () => {
   const allOrders = [planned, inProgress, completed, cancelled];
 
   beforeEach(() => {
+    realtimeEvents = new Subject<void>();
+
     TestBed.configureTestingModule({
       imports: [WorkOrdersPage],
       providers: [
         provideHttpClient(),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        {
+          provide: RealtimeService,
+          useValue: {
+            workOrdersChanged$: realtimeEvents.asObservable()
+          }
+        }
       ]
     });
 
@@ -344,6 +355,53 @@ describe('WorkOrdersPage', () => {
     expect(element.textContent).toContain('Cancelada');
   });
 
+  it('refreshes orders on SignalR without losing filters', () => {
+    const { fixture, element } = setup();
+
+    flushLoad(fixture);
+
+    changeSelect(
+      element,
+      '#filter-work-order-facility',
+      facilityId
+    );
+
+    flushLoad(fixture, [planned], facilities, { facilityId });
+
+    realtimeEvents.next();
+
+    flushLoad(
+      fixture,
+      [{
+        ...planned,
+        title: 'Orden actualizada desde otra sesion'
+      }],
+      facilities,
+      { facilityId }
+    );
+
+    expect(element.textContent).toContain(
+      'Orden actualizada desde otra sesion'
+    );
+
+    expect(
+      element.querySelector<HTMLSelectElement>(
+        '#filter-work-order-facility'
+      )?.value
+    ).toBe(facilityId);
+  });
+
+  it('stops listening to SignalR after leaving the page', () => {
+    const { fixture } = setup();
+
+    flushLoad(fixture);
+
+    fixture.destroy();
+
+    realtimeEvents.next();
+
+    httpMock.expectNone('/api/work-orders');
+  });
   it('shows an empty state when no orders exist', () => {
     const { fixture, element } = setup();
 

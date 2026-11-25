@@ -4,6 +4,8 @@ import {
   provideHttpClientTesting
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
+import { RealtimeService } from '../../../core/services/realtime.service';
 import {
   afterEach,
   beforeEach,
@@ -23,6 +25,7 @@ import { IncidentsPage } from './incidents-page';
 
 describe('IncidentsPage', () => {
   let httpMock: HttpTestingController;
+  let realtimeEvents: Subject<void>;
 
   const facilityId = '00000000-0000-0000-0000-000000000001';
   const otherFacilityId = '00000000-0000-0000-0000-000000000002';
@@ -74,11 +77,19 @@ describe('IncidentsPage', () => {
   };
 
   beforeEach(() => {
+    realtimeEvents = new Subject<void>();
+
     TestBed.configureTestingModule({
       imports: [IncidentsPage],
       providers: [
         provideHttpClient(),
-        provideHttpClientTesting()
+        provideHttpClientTesting(),
+        {
+          provide: RealtimeService,
+          useValue: {
+            incidentsChanged$: realtimeEvents.asObservable()
+          }
+        }
       ]
     });
 
@@ -220,6 +231,110 @@ describe('IncidentsPage', () => {
     expect(row?.textContent).toContain('23/11/2026');
   });
 
+  it('refreshes incidents on SignalR and preserves filters', () => {
+    const { fixture, element } = setup();
+
+    flushLoad(fixture);
+
+    changeSelect(
+      element,
+      '#filter-incident-facility',
+      facilityId
+    );
+
+    flushLoad(
+      fixture,
+      [incident],
+      facilities,
+      assets,
+      { facilityId }
+    );
+
+    changeSelect(
+      element,
+      '#filter-incident-status',
+      String(IncidentStatus.Open)
+    );
+
+    flushLoad(
+      fixture,
+      [incident],
+      facilities,
+      assets,
+      {
+        facilityId,
+        status: String(IncidentStatus.Open)
+      }
+    );
+
+    changeSelect(
+      element,
+      '#filter-incident-priority',
+      String(IncidentPriority.High)
+    );
+
+    const expectedFilters = {
+      facilityId,
+      status: String(IncidentStatus.Open),
+      priority: String(IncidentPriority.High)
+    };
+
+    flushLoad(
+      fixture,
+      [incident],
+      facilities,
+      assets,
+      expectedFilters
+    );
+
+    // Simular la notificacion de otra sesion.
+    realtimeEvents.next();
+
+    flushLoad(
+      fixture,
+      [{
+        ...incident,
+        title: 'Incidencia actualizada desde otra sesion'
+      }],
+      facilities,
+      assets,
+      expectedFilters
+    );
+
+    expect(element.textContent).toContain(
+      'Incidencia actualizada desde otra sesion'
+    );
+
+    expect(
+      element.querySelector<HTMLSelectElement>(
+        '#filter-incident-facility'
+      )?.value
+    ).toBe(facilityId);
+
+    expect(
+      element.querySelector<HTMLSelectElement>(
+        '#filter-incident-status'
+      )?.value
+    ).toBe(String(IncidentStatus.Open));
+
+    expect(
+      element.querySelector<HTMLSelectElement>(
+        '#filter-incident-priority'
+      )?.value
+    ).toBe(String(IncidentPriority.High));
+  });
+
+  it('stops listening to incident events after leaving the page', () => {
+    const { fixture } = setup();
+
+    flushLoad(fixture);
+
+    fixture.destroy();
+
+    realtimeEvents.next();
+
+    httpMock.expectNone('/api/incidents');
+  });
   it('should show an empty message when there are no incidents', () => {
     const { fixture, element } = setup();
 

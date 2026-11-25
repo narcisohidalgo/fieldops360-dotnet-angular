@@ -10,6 +10,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { merge } from 'rxjs';
+import { RealtimeService } from '../../../core/services/realtime.service';
 
 import { DashboardSummary } from '../models/dashboard-summary.model';
 import { DashboardService } from '../services/dashboard.service';
@@ -73,10 +75,21 @@ export class DashboardPage implements OnInit {
       chartBar('cancelled', 'Canceladas', data.cancelled, data.total, 'slate')
     ];
   });
+  private readonly realtime = inject(RealtimeService);
   private readonly dashboard = inject(DashboardService);
   private readonly destroyRef = inject(DestroyRef);
+  private loadSequence = 0;
 
   ngOnInit(): void {
+    // Actualizar los indicadores al recibir cambios operativos.
+    // Reutilizar el endpoint REST y los permisos existentes.
+    merge(
+      this.realtime.workOrdersChanged$,
+      this.realtime.incidentsChanged$
+    )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadSummary());
+
     this.loadSummary();
   }
 
@@ -87,6 +100,9 @@ export class DashboardPage implements OnInit {
   }
 
   private loadSummary(): void {
+    // Evitar que respuestas antiguas sustituyan datos recientes.
+    const currentLoad = ++this.loadSequence;
+
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
@@ -94,10 +110,18 @@ export class DashboardPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: summary => {
+          if (currentLoad !== this.loadSequence) {
+            return;
+          }
+
           this.summary.set(summary);
           this.isLoading.set(false);
         },
         error: (error: unknown) => {
+          if (currentLoad !== this.loadSequence) {
+            return;
+          }
+
           this.summary.set(null);
           this.isLoading.set(false);
 

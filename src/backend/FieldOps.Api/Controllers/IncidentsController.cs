@@ -1,4 +1,5 @@
 using FieldOps.Api.Security;
+using FieldOps.Api.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using FieldOps.Application.Incidents;
 using FieldOps.Domain.Enums;
@@ -13,10 +14,14 @@ namespace FieldOps.Api.Controllers;
 public sealed class IncidentsController : ControllerBase
 {
     private readonly IIncidentService _incidentService;
+    private readonly IOperationsEventPublisher _events;
 
-    public IncidentsController(IIncidentService incidentService)
+    public IncidentsController(
+        IIncidentService incidentService,
+        IOperationsEventPublisher events)
     {
         _incidentService = incidentService;
+        _events = events;
     }
 
     // GET /api/incidents
@@ -79,6 +84,8 @@ public sealed class IncidentsController : ControllerBase
                 command,
                 cancellationToken);
 
+            await _events.IncidentsChangedAsync();
+
             return CreatedAtAction(
                 nameof(GetById),
                 new { id = incident.Id },
@@ -133,6 +140,8 @@ public sealed class IncidentsController : ControllerBase
             {
                 return NotFound();
             }
+
+            await _events.IncidentsChangedAsync();
 
             return NoContent();
         }
@@ -226,6 +235,8 @@ public sealed class IncidentsController : ControllerBase
             {
                 return NotFound();
             }
+
+            await _events.IncidentsChangedAsync();
 
             return NoContent();
         }
