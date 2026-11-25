@@ -7,7 +7,7 @@ import {
   signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe } from '@angular/common';
+import { OperationalNotifications } from './operational-notifications/operational-notifications';
 import {
   Router,
   RouterLink,
@@ -21,7 +21,7 @@ import { OperationalNotificationsService } from './core/services/operational-not
 
 @Component({
   selector: 'app-root',
-  imports: [DatePipe, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, OperationalNotifications],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

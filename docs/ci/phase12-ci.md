@@ -6,7 +6,7 @@ Phase 12 covers SignalR and real-time operations.
 
 ## Goal
 
-Automate build and unit-test validation for FieldOps 360.
+Automate build, unit-test and database-independent API smoke-test validation for FieldOps 360.
 
 The project uses ASP.NET Core 10, Clean Architecture,
 Angular 22, xUnit and Vitest.
@@ -48,11 +48,20 @@ dotnet build src/backend/FieldOps.slnx --configuration Release --no-restore
 dotnet test src/backend/FieldOps.slnx --configuration Release --no-build --no-restore --verbosity minimal
 ```
 
-The solution contains the four backend projects and
-the xUnit application test project.
+The solution contains the four backend projects, the
+xUnit application test project and the Phase 13
+integration test project.
 
-These tests do not require the developer's local
-SQL Server instance.
+The default test command runs unit tests and
+database-independent API smoke tests.
+
+SQL Server-backed tests require FIELDOPS_RUN_SQL_TESTS=1.
+Real browser orchestration requires FIELDOPS_RUN_E2E=1
+and the additional local E2E prerequisites.
+
+These opt-in scenarios are skipped by the current CI
+configuration. The workflow does not provision SQL Server
+or install Playwright browsers.
 
 ## Frontend job
 
@@ -143,9 +152,9 @@ npm.cmd run build
 
 ## Current scope and limitations
 
-- CI covers builds and unit tests.
-- No database-backed integration tests run in CI.
-- No browser end-to-end tests run in CI.
+- CI covers builds, unit tests and database-independent API smoke tests.
+- Database-backed integration tests are implemented and locally validated, but are skipped by default in CI.
+- Playwright end-to-end scenarios are implemented and locally validated, but are not executed by the current workflow.
 - No code coverage threshold is enforced.
 - No production deployment is configured.
 - Docker and automated delivery are future work.

@@ -132,3 +132,5 @@ app.MapHub<OperationsHub>(
     options => options.CloseOnAuthenticationExpiration = true);
 
 app.Run();
+
+public partial class Program { }

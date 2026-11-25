@@ -4,7 +4,7 @@
 
 FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Phases 1-12 implemented and technically validated for local development and portfolio demonstration. Facilities, Assets, Incidents, Technicians, Work Orders, ASP.NET Core Identity authentication, role-based authorization and user management are implemented. Production deployment hardening and further integration testing remain future work.
+> **Project status:** Phases 1-13 implemented and technically validated for local development and portfolio demonstration. The platform includes operational management, ASP.NET Core Identity security, dashboard and GIS, SignalR real-time updates and automated unit, integration and browser end-to-end testing. The Phase 13 local validation passed **789 test scenarios**. Production deployment and infrastructure hardening remain future work.
 
 ## Technology stack
 
@@ -14,7 +14,7 @@ FieldOps 360 is a full-stack portfolio project for managing facilities, their eq
 | Frontend | Angular 22, TypeScript, standalone components, reactive forms, template-driven login, signals |
 | Persistence | SQL Server, Entity Framework Core 10, migrations |
 | Architecture | Clean Architecture (Domain, Application, Infrastructure, API) |
-| Tests | xUnit (.NET), Vitest (Angular) |
+| Tests | xUnit, ASP.NET Core WebApplicationFactory, EF Core/SQL Server integration tests, Vitest, Playwright (Chromium), Coverlet and V8 coverage |
 | Dashboard and GIS | Angular signals, CSS charts, Leaflet 1.9.4, OpenStreetMap tiles |
 | Real-time operations | ASP.NET Core SignalR, `@microsoft/signalr` 10.0.11, RxJS |
 
@@ -153,13 +153,15 @@ src/
   frontend/
     fieldops-web/              # Angular 22 application
 tests/
-  FieldOps.Application.Tests/  # xUnit tests
+  FieldOps.Application.Tests/  # Domain and application unit tests
+  FieldOps.Integration.Tests/  # API, SQL Server, Identity, SignalR and E2E orchestration
 docs/
   ci/                          # GitHub Actions CI documentation
   database/                    # SQL database documentation
   security/                    # Authentication, authorization and security
   phase11-dashboard-gis.md     # Dashboard, KPIs, geolocation and map
   phase12-realtime.md          # SignalR, notifications and live dashboard
+  phase13-testing-quality.md   # Integration, E2E, coverage and quality
 ```
 
 The frontend uses feature-based folders under `src/app/features/`, Angular `HttpClient` services and lazy-loaded routes.
@@ -231,12 +233,15 @@ Two independent jobs run on Ubuntu:
 
 | Job | Validation |
 | --- | --- |
-| Backend (.NET 10) | Restore, Release build, xUnit tests |
+| Backend (.NET 10) | Restore, Release build, xUnit unit tests and database-independent API smoke tests |
 | Frontend (Angular 22) | `npm ci`, Vitest tests, production build |
 
 The workflow uses read-only repository permissions and
 does not require SQL Server, application credentials
-or production secrets.
+or production secrets. SQL Server integration tests and
+real browser orchestration are opt-in and skipped by default.
+The current CI workflow does not execute Playwright scenarios
+or enforce coverage thresholds.
 
 It performs continuous integration checks only.
 It does not deploy the application, apply migrations
@@ -324,34 +329,114 @@ Angular runs at `http://localhost:4200` and forwards `/api/**` and `/hubs/**` re
 
 ## Tests
 
-From the repository root:
+Phase 13 introduces automated integration testing against SQL Server,
+API and Identity verification, SignalR integration testing and Chromium
+browser end-to-end scenarios.
+
+### Test commands
+
+From the repository root, run database-independent backend tests:
 
 ```powershell
-dotnet test src/backend/FieldOps.slnx
+dotnet test src/backend/FieldOps.slnx --configuration Release
+```
+
+SQL Server-backed tests and real browser orchestration are opt-in.
+The default command intentionally skips these tests when their
+environment variables are not enabled.
+
+To run the complete non-browser integration suite on Windows with
+a local SQL Server instance and Windows Integrated authentication:
+
+```powershell
+$env:FIELDOPS_RUN_SQL_TESTS = "1"
+dotnet test tests/FieldOps.Integration.Tests/FieldOps.Integration.Tests.csproj --configuration Release --filter "FullyQualifiedName!~RealBrowserIntegrationTests"
+Remove-Item Env:FIELDOPS_RUN_SQL_TESTS -ErrorAction SilentlyContinue
 ```
 
 From `src/frontend/fieldops-web`:
 
 ```powershell
+npm.cmd ci
 npm.cmd test -- --watch=false
+npm.cmd run test:coverage
 npm.cmd run build
+npx.cmd playwright install chromium
+npm.cmd run e2e
 ```
 
-Following the Phase 12 local audit (25 November 2026), **263 .NET/xUnit tests and 451 Angular/Vitest tests passed (714 total)**. The .NET Release build completed with zero warnings and zero errors, and the Angular production build succeeded.
+For real browser tests, install the frontend dependencies and Chromium
+first, return to the repository root and follow the instructions in
+[Phase 13 testing and quality documentation](docs/phase13-testing-quality.md).
 
-All 40 Angular test files passed in the full regression run. The production build reports two non-blocking warnings: the application stylesheet exceeds its warning budget by 194 bytes, and Leaflet 1.9.4 produces a CommonJS optimization warning. Both are retained for review during Phase 13.
+### Latest local validation
 
-Work Order REST operations passed 38 functional HTTP checks. An additional local concurrent-request check returned one HTTP 201 Created and one HTTP 409 Conflict for two requests using the same work order code; a further duplicate returned HTTP 409, and exactly one matching record was persisted. This validates the observed HTTP behavior but does not specifically prove that SQL Server's unique-index exception handler was exercised.
+Phase 13 validation completed on **25 November 2026**.
 
-Authentication and role-based authorization are implemented. Dedicated automated Identity/API integration tests, full client-side version preconditions and production deployment hardening remain future work. The project remains a local-development portfolio demonstration.
+| Test category | Passed |
+| --- | ---: |
+| .NET unit tests | 263 |
+| .NET integration tests | 35 |
+| Angular/Vitest unit tests | 486 |
+| Playwright with mocked API | 1 |
+| Playwright with real API and SQL Server | 4 |
+| **Total scenarios** | **789** |
+
+All selected scenarios passed without failures or skips.
+The xUnit coordinator for the four real browser scenarios is not
+counted again in the total.
+
+The backend Release validation and Angular production build completed
+without detected compiler or build warnings.
+
+Angular initial production bundle: **382.26 kB**, with an estimated
+transfer size of **99.17 kB**.
+
+### Code coverage
+
+Backend coverage collected with Coverlet in Debug configuration:
+
+| Suite | Layer | Lines | Branches |
+| --- | --- | ---: | ---: |
+| Unit | Domain | 98.52% | 97.91% |
+| Unit | Application | 96.16% | 98.41% |
+| Integration | Domain | 82.99% | 75.69% |
+| Integration | Application | 93.29% | 77.77% |
+| Integration | Infrastructure | 98.10% | 88.23% |
+| Integration | API | 55.53% | 28.82% |
+
+Unit and integration coverage are reported separately; their
+percentages must not be added or averaged to represent combined coverage.
+The API and Infrastructure measurements include generated code and
+EF Core migrations where applicable.
+
+Final Angular coverage collected with Vitest and V8:
+
+| Metric | Coverage |
+| --- | ---: |
+| Lines | 90.67% |
+| Branches | 85.98% |
+| Functions | 84.23% |
+| Statements | 90.90% |
+
+The coverage reports are generated locally and are not committed.
+No coverage threshold is currently enforced.
+
+Database-backed tests create isolated temporary databases rather than
+using the normal `FieldOpsDb` database. Integration test collections run
+sequentially to reduce contention on the shared SQL Server instance.
+
+See [Phase 13 testing and quality documentation](docs/phase13-testing-quality.md)
+for the testing strategy, execution commands, security checks, coverage
+interpretation and remaining limitations.
 
 ## Roadmap
 
-- Automated integration/end-to-end tests, including database and API paths.
-- Dedicated automated Identity/API integration tests and production deployment hardening.
-- Docker deployment and automated delivery (CD); GitHub Actions CI is already configured as groundwork for Phase 14.
+- Phase 14: Docker deployment, production configuration, infrastructure hardening and automated delivery (CD).
+- Extend GitHub Actions to execute database-backed integration and browser end-to-end tests.
+- Phase 15: final portfolio documentation, demonstration materials and presentation.
 - Client-side version preconditions (such as HTTP `If-Match`) and pagination for larger-scale multi-user operation.
 
 ## Security and deployment scope
 
-This repository is a **local-development and portfolio demonstration**, not a production-ready deployment. Authentication and role-based authorization are implemented using ASP.NET Core Identity, protected API endpoints, cookie sessions and CSRF validation. These controls do not by themselves establish production readiness. Keep secrets outside source control. Before public deployment, complete infrastructure and HTTPS hardening, secure database transport, automated Identity/API integration testing, monitoring, operational safeguards and other production security reviews.
+This repository is a **local-development and portfolio demonstration**, not a production-ready deployment. Authentication and role-based authorization are implemented using ASP.NET Core Identity, protected API endpoints, cookie sessions and CSRF validation. These controls do not by themselves establish production readiness. Keep secrets outside source control. Automated Identity/API integration tests and browser security scenarios are implemented. Before public deployment, complete infrastructure and HTTPS hardening, secure database transport, monitoring, operational safeguards, CI/CD integration and other production security reviews.
