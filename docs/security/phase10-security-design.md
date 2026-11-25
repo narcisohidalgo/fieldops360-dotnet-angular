@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 10 implementation and functional verification completed on 2026-11-24. Final audit and Git publication pending.
+Phase 10 implementation and functional verification completed on 2026-11-24. Final audit and Git publication completed on 2026-11-25 (commit 4fba51440dc03dbdec38b8e6ba4519526105b840).
 
 Baseline commit: 5cb9dd84bc1161139aa67f3fad9ce052dc435864.
 
@@ -179,10 +179,10 @@ ownership of an authenticated session.
 
 ### Remaining work
 
-- Complete final code, migration and documentation audit.
+- Final Phase 10 code, migration and documentation audit completed before publication.
 - Add dedicated automated ASP.NET Core Identity/API integration tests in a future testing phase.
 - Review deployment hardening before a public production deployment.
-- Audit local Git changes, stage, commit and push only after validation.
+- Phase 10 changes committed and published to GitHub after validation.
 
 ---
 ## Completion criteria

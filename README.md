@@ -4,19 +4,43 @@
 
 FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Facilities, Assets, Incidents, Technicians and Work Orders are implemented for local development and demonstration. Authentication, authorization, deployment hardening and other modules remain future work.
+> **Project status:** Phases 1-10 completed for local development and portfolio demonstration. Facilities, Assets, Incidents, Technicians, Work Orders, ASP.NET Core Identity authentication, role-based authorization and user management are implemented. Production deployment hardening and further integration testing remain future work.
 
 ## Technology stack
 
 | Layer | Technology |
 | --- | --- |
-| Backend | ASP.NET Core 10 Web API, C# |
-| Frontend | Angular 22, TypeScript, standalone components, reactive forms, signals |
+| Backend | ASP.NET Core 10 Web API, C#, ASP.NET Core Identity |
+| Frontend | Angular 22, TypeScript, standalone components, reactive forms, template-driven login, signals |
 | Persistence | SQL Server, Entity Framework Core 10, migrations |
 | Architecture | Clean Architecture (Domain, Application, Infrastructure, API) |
 | Tests | xUnit (.NET), Vitest (Angular) |
 
 ## Implemented features
+
+### Authentication and authorization (Phase 10)
+
+- Authenticate users through ASP.NET Core Identity with an HttpOnly application cookie.
+- Protect state-changing API requests with antiforgery tokens and the `X-XSRF-TOKEN` header.
+- Restore browser sessions with `GET /api/auth/me`.
+- Provide login, logout, access-denied and role-aware Angular navigation.
+- Apply server-side role policies to operational and administrative endpoints.
+- Manage accounts, activation, deactivation, roles and administrative password resets.
+- Prevent deactivation or demotion of the last active Administrator.
+- Link Technician-role accounts to active technician records.
+- Restrict technicians to their own assigned work orders.
+- Apply password requirements, account lockout and security-stamp validation.
+- Keep credentials out of source control; public self-registration is disabled.
+
+| Role | Main permissions |
+| --- | --- |
+| Administrator | Manage facilities, assets, incidents, technicians, work orders and user accounts |
+| Supervisor | Read facilities; manage assets, incidents, technicians and work orders |
+| Technician | Read facilities and assets; view, start and complete assigned work orders |
+
+Authorization is enforced by the API. Angular route guards provide navigation control but are not the security boundary.
+
+See [Phase 10 security design](docs/security/phase10-security-design.md) for implementation details, verification and remaining hardening work.
 
 ### Facilities
 
@@ -69,6 +93,14 @@ Incident priorities: `Low` (1), `Medium` (2), `High` (3), `Critical` (4). Status
 
 Priorities: `Low` (1), `Medium` (2), `High` (3), `Critical` (4). Statuses: `Planned` (1), `InProgress` (2), `Completed` (3), `Cancelled` (4).
 
+### Technician workspace
+
+- Display work orders assigned to the authenticated technician.
+- Read only orders linked to the technician identity stored on the server.
+- Start and complete eligible assigned orders.
+- Reject unauthorized access to other technicians' work orders.
+- Apply optimistic concurrency checks to work order status changes.
+
 ### Optimistic concurrency
 
 SQL Server `rowversion` is configured as an EF Core concurrency token for incidents and work orders. Conflicting writes using the same previously loaded database version can be detected, with HTTP 409 Conflict returned by the API.
@@ -90,6 +122,7 @@ tests/
   FieldOps.Application.Tests/  # xUnit tests
 docs/
   database/                    # SQL database documentation
+  security/                    # Authentication, authorization and security
 ```
 
 The frontend uses feature-based folders under `src/app/features/`, Angular `HttpClient` services and lazy-loaded routes.
@@ -98,6 +131,21 @@ The frontend uses feature-based folders under `src/app/features/`, Angular `Http
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
+| GET | `/api/auth/csrf` | Obtain an antiforgery request token |
+| POST | `/api/auth/login` | Authenticate and establish a cookie session |
+| POST | `/api/auth/logout` | End the authenticated session |
+| GET | `/api/auth/me` | Retrieve the current authenticated user |
+| GET | `/api/users` | List managed accounts (Administrator) |
+| GET | `/api/users/{id}` | Retrieve a managed account (Administrator) |
+| POST | `/api/users` | Create an account (Administrator) |
+| PUT | `/api/users/{id}` | Update an account (Administrator) |
+| PATCH | `/api/users/{id}/activate` | Activate an account (Administrator) |
+| PATCH | `/api/users/{id}/deactivate` | Deactivate an account (Administrator) |
+| POST | `/api/users/{id}/reset-password` | Reset an account password (Administrator) |
+| GET | `/api/my/work-orders` | List the authenticated technician's orders |
+| GET | `/api/my/work-orders/{id}` | Retrieve an assigned work order |
+| PATCH | `/api/my/work-orders/{id}/start` | Start an assigned work order |
+| PATCH | `/api/my/work-orders/{id}/complete` | Complete an assigned work order |
 | GET | `/api/facilities` | List facilities |
 | GET | `/api/assets` | List assets; optional `facilityId` filter |
 | GET | `/api/incidents` | List incidents; optional `facilityId`, `assetId`, `status`, `priority` filters |
@@ -151,16 +199,31 @@ Run from the repository root:
 dotnet ef database update --project src/backend/FieldOps.Infrastructure/FieldOps.Infrastructure.csproj --startup-project src/backend/FieldOps.Api/FieldOps.Api.csproj --context FieldOpsDbContext
 ```
 
-This applies all available migrations, including `InitialCreate`, `AddIncidents`, `AddIncidentRowVersion`, `AddTechnicians` and `AddWorkOrders`, as needed. The file `docs/database/InitialCreate.sql` represents **only the initial schema**, not the complete current schema; see [Database documentation](docs/database/README.md).
+This applies all available migrations, including `InitialCreate`, `AddIncidents`, `AddIncidentRowVersion`, `AddTechnicians`, `AddWorkOrders` and `AddIdentitySecurity`, as needed. The file `docs/database/InitialCreate.sql` represents **only the initial schema**, not the complete current schema; see [Database documentation](docs/database/README.md).
 
-### 3. Start the backend
+### 3. Bootstrap the first administrator (new databases only)
+
+After applying the Identity migration, create the first Administrator from an interactive terminal:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run --project src/backend/FieldOps.Api/FieldOps.Api.csproj --no-launch-profile -- --bootstrap-admin
+```
+
+Enter the display name, email and password when prompted. Password entry is hidden. The password must satisfy the configured Identity policy.
+
+This command is restricted to the Development environment, does not start the API server and refuses to create another Administrator when an administrator account already exists.
+
+**For an existing database that already has an Administrator, skip this step.** Do not recreate or reset accounts unnecessarily. Never place an administrator password in scripts, documentation or Git.
+
+### 4. Start the backend
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src/backend/FieldOps.Api/FieldOps.Api.csproj --no-launch-profile -- --urls http://localhost:5080
 ```
 
-### 4. Start Angular
+### 5. Start Angular
 
 In a second terminal:
 
@@ -182,6 +245,10 @@ Angular runs at `http://localhost:4200` and forwards `/api/**` requests to the b
 - `http://localhost:4200/incidents` — Incidents
 - `http://localhost:4200/technicians` — Technicians
 - `http://localhost:4200/work-orders` — Work Orders
+- `http://localhost:4200/my-work-orders` — My Work Orders (Technician)
+- `http://localhost:4200/users` — User Management (Administrator)
+- `http://localhost:4200/login` — Login
+- `http://localhost:4200/access-denied` — Access Denied
 
 ## Tests
 
@@ -198,19 +265,19 @@ npm.cmd test -- --watch=false
 npm.cmd run build
 ```
 
-At completion of Phase 9 local validation (24 November 2026), all .NET tests and **322 Angular/Vitest tests across 24 test files** passed. The .NET solution and Angular production build succeeded, and EF Core reported no pending model changes.
+Following Phase 10 local validation (November 2026), **246 .NET/xUnit tests and 376 Angular/Vitest tests across 34 test files passed (622 tests total)**. The .NET Release build and Angular production build also succeeded. The Phase 10 security implementation was manually checked against role-based authorization and authentication scenarios.
 
 Work Order REST operations passed 38 functional HTTP checks. An additional local concurrent-request check returned one HTTP 201 Created and one HTTP 409 Conflict for two requests using the same work order code; a further duplicate returned HTTP 409, and exactly one matching record was persisted. This validates the observed HTTP behavior but does not specifically prove that SQL Server's unique-index exception handler was exercised.
 
-Authentication, authorization and full client-side version preconditions are not implemented; the project remains a local-development portfolio demonstration.
+Authentication and role-based authorization are implemented. Dedicated automated Identity/API integration tests, full client-side version preconditions and production deployment hardening remain future work. The project remains a local-development portfolio demonstration.
 
 ## Roadmap
 
 - Automated integration/end-to-end tests, including database and API paths.
-- Authentication and authorization, plus deployment hardening.
+- Dedicated automated Identity/API integration tests and production deployment hardening.
 - Docker deployment and GitHub Actions CI/CD.
 - Client-side version preconditions (such as HTTP `If-Match`) and pagination for larger-scale multi-user operation.
 
 ## Security and deployment scope
 
-This repository is a **local-development and portfolio demonstration**, not a production-ready deployment. Authentication and authorization are not yet implemented; the API must not be exposed publicly without appropriate security controls. Keep secrets outside source control. Complete authentication, authorization, secure database transport, client-side version preconditions, monitoring and deployment hardening before production use.
+This repository is a **local-development and portfolio demonstration**, not a production-ready deployment. Authentication and role-based authorization are implemented using ASP.NET Core Identity, protected API endpoints, cookie sessions and CSRF validation. These controls do not by themselves establish production readiness. Keep secrets outside source control. Before public deployment, complete infrastructure and HTTPS hardening, secure database transport, automated Identity/API integration testing, monitoring, operational safeguards and other production security reviews.
