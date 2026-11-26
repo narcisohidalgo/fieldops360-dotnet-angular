@@ -4,8 +4,8 @@
 > validates the local Git revision and deployment files before
 > downloading images. CI includes an isolated Administrator
 > bootstrap, real Docker HTTPS authentication and structured
-> test report verification. Final execution of the updated
-> Docker suite and CI workflow remains pending.
+> test report verification. The updated Docker suite and all
+> five CI/CD jobs passed in GitHub Actions run #7.
 >
 > The original Phase 14 deployment and delivery results
 > are preserved as historical evidence.
@@ -339,7 +339,7 @@ database and tests real HTTPS login, cookie security, CSRF
 rejection, protected API access, session restoration and logout.
 
 All three scenarios must pass before CI can publish images.
-The updated three-scenario execution remains pending final CI.
+All three scenarios passed in GitHub Actions run #7 on 26 November 2026.
 
 ## 10. CI/CD pipeline
 
@@ -639,6 +639,43 @@ subsequently verified as described in Section 11.
 The Phase 14 local deployment and continuous delivery
 objectives are complete. Public production hosting and
 additional production hardening remain outside this scope.
+
+### Phase 15 final audit and registry verification
+
+Validation date: **26 November 2026**.
+
+- GitHub Actions run: **#7**.
+- Source revision: `10b8529634c2a785f158d458bfdddf0a04ed671c`.
+- Overall result: success, all five jobs passed.
+- Workflow duration: 5 minutes and 43 seconds.
+- Application test scenarios: 873 passed.
+- JSON validator regression tests: 30 passed.
+- TRX validator regression tests: 14 passed.
+- Git revision guard checks: eight isolated scenarios passed.
+- Additional negative CLI checks: three passed.
+- Production Docker browser tests: three passed, including real HTTPS authentication.
+
+All three images were verified independently through anonymous
+GHCR registry requests.
+
+Image tag: `sha-10b8529634c2a785f158d458bfdddf0a04ed671c`.
+
+| Component | Registry digest |
+| --- | --- |
+| API | `sha256:f45723ee3135556953fba03455b7849ff26fdde9449298401ea83e33a63ecfdc` |
+| Web | `sha256:c97868ab7bb2fa1c8f3bed4d7de287e8d2c12f892fca8a5010915e3dd1679b1d` |
+| Migrations | `sha256:3e1e562d6f1ae240a1b3022150e2e00170ffae9a90518f21b9f68be576f4735f` |
+
+The OCI source and revision labels and Linux AMD64 platform
+were verified for all three images.
+
+This revision passed the Docker CI deployment and browser tests.
+An independent fresh installation from its published GHCR
+images was not repeated. The earlier isolated installation
+evidence remains documented in Section 11.
+
+Registry metadata verification does not establish cryptographic
+publisher authenticity.
 
 ## 13. Deployment limitations and future hardening
 

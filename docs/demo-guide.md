@@ -392,8 +392,8 @@ Show the testing strategy:
 The Phase 15 audit has validated 870 application tests locally,
 including 559 Angular tests across 43 files.
 
-Three Docker browser scenarios remain pending final CI,
-bringing the expected complete test total to 873.
+All three Docker browser scenarios also passed in GitHub Actions
+run #7, bringing the complete validated test total to 873.
 
 The Angular line coverage is 92.27%.
 The original Phase 14 baseline recorded 794 passing scenarios.

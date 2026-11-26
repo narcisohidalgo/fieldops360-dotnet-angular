@@ -8,7 +8,7 @@
 
 FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** The application has been implemented and validated through Phase 14, including local Docker deployment and continuous delivery to GHCR. Phase 15 adds architecture documentation, reproducible fictional demonstration data, a screenshot gallery and a technical demonstration guide. Portfolio documentation and demonstration materials have been prepared and reviewed locally. Public production hosting is outside the current scope.
+> **Project status:** The application has been implemented and technically validated through Phase 15, including the final portfolio audit, local Docker deployment and continuous delivery to GHCR. Phase 15 adds architecture documentation, reproducible fictional demonstration data, a screenshot gallery and a technical demonstration guide. Portfolio documentation and demonstration materials have been prepared and reviewed locally. Public production hosting is outside the current scope.
 
 ## Project highlights
 
@@ -34,22 +34,23 @@ and container delivery.
 
 | Metric | Result |
 | --- | ---: |
-| Phase 15 automated test scenarios | **870 passed locally; 3 Docker tests pending CI** |
+| Phase 15 automated test scenarios | **873 passed** |
 | Backend unit tests | 263 |
 | Backend integration tests | 43 |
 | Angular/Vitest tests | 559 |
-| Playwright browser scenarios | 5 passed locally; 3 Docker scenarios pending CI |
+| Playwright browser scenarios | 8 passed |
 | Angular line coverage | 92.27% |
-| GitHub Actions validation and delivery jobs | 5/5 passed for the previous published baseline |
+| GitHub Actions validation and delivery jobs | 5/5 passed - run #7 |
 | Public application container images | 3 |
 | Reproducible fictional business records | 84 |
 | Supported user roles | 3 |
 
-Test and coverage figures refer to the Phase 15 local audit
-completed on 26 November 2026. The updated CI/CD workflow
-and three Docker browser scenarios still require final execution.
-Earlier published CI/CD and container installation results
-are historical evidence, not verification of the updated revision.
+Test and coverage figures refer to the Phase 15 audit completed
+on 26 November 2026, including local validation and GitHub Actions
+run #7 for application revision 10b8529.
+
+All mandatory test suites passed. Public access to the three
+corresponding GHCR images was independently verified.
 
 See the [testing section](#tests) and
 [Docker and CI/CD documentation](docs/phase14-docker-cicd.md)
@@ -349,7 +350,30 @@ The frontend uses feature-based folders under `src/app/features/`, Angular `Http
 
 The Facilities and Assets controllers also provide their own create, update and activation/deactivation operations.
 
-## Continuous integration and delivery (Phase 14)
+## Continuous integration and delivery
+
+### Phase 15 final validation
+
+GitHub Actions run **#7** passed on 26 November 2026 for
+application revision `10b8529634c2a785f158d458bfdddf0a04ed671c`.
+
+| Job | Result | Duration |
+| --- | --- | ---: |
+| Backend | Passed | 34 s |
+| Frontend | Passed | 26 s |
+| Integration and E2E | Passed | 3m 57s |
+| Docker | Passed | 2m 31s |
+| Publish to GHCR | Passed | 1m 40s |
+| **Overall workflow** | **Success** | **5m 43s** |
+
+All three published images were independently verified for
+anonymous registry access, OCI source and revision labels,
+Linux AMD64 platform and registry digests.
+
+See the [Docker and CI/CD documentation](docs/phase14-docker-cicd.md)
+for the complete registry evidence.
+
+### Pipeline architecture and historical validation
 
 The GitHub Actions workflow is defined in
 [.github/workflows/ci.yml](.github/workflows/ci.yml).
@@ -529,11 +553,11 @@ Clone the repository if necessary, check out the source
 revision corresponding to the desired published image tag,
 and run the installer from that checkout.
 
-For example, from a clean clone, the previously verified
-application revision can be selected with:
+For example, from a clean clone, select the application revision
+validated by GitHub Actions run #7:
 
 ```powershell
-git checkout --detach 13cb8c258bd09847a4e981c5d4357d4a1c045f2c
+git checkout --detach 10b8529634c2a785f158d458bfdddf0a04ed671c
 ```
 
 The following installer parameter must contain the full
@@ -824,9 +848,11 @@ All selected tests passed without failures or skips.
 The 43 integration tests and native E2E suite also completed
 without leaving temporary SQL databases.
 
-The three Docker browser scenarios remain pending final CI execution,
+All three Docker browser scenarios passed in GitHub Actions run #7,
 including real administrator authentication over HTTPS.
-The expected complete application test total is 873.
+
+The complete application test total is 873 passing scenarios:
+870 validated locally and three Docker scenarios validated in CI.
 
 The xUnit browser coordinator is excluded from the total.
 The 30 JSON validator tests, 14 TRX validator scenarios,
@@ -887,7 +913,7 @@ interpretation and remaining limitations.
   prepared and locally reviewed.
 - Phase 15 audit: backend concurrency, security, frontend
   robustness and CI/CD test validation improvements implemented.
-  Final consolidated CI/CD verification remains pending.
+  Consolidated validation completed: 873 passing scenarios and all five CI/CD jobs successful.
 - Future production work: public hosting, trusted certificates,
   secure secret management, monitoring, backup and recovery,
   dependency and image security reviews.

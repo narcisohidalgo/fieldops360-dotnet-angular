@@ -143,8 +143,8 @@ The production build completed without warnings.
 The isolated browser smoke test and all four native real
 browser scenarios also passed.
 
-The updated Docker browser suite and consolidated CI workflow
-remain subject to final CI execution.
+The updated three-scenario Docker browser suite and all five
+CI/CD jobs passed in GitHub Actions run #7 on 26 November 2026.
 
 ## Project structure
 
