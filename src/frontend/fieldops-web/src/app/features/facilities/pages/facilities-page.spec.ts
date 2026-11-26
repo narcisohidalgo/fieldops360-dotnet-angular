@@ -994,4 +994,185 @@ describe('FacilitiesPage', () => {
       expect(element.textContent).toContain('Modo consulta');
     });
   }
+
+  it.each(['create', 'edit'])(
+    'blocks conflicting page actions during %s and unlocks after error',
+    mode => {
+      const fixture = TestBed.createComponent(FacilitiesPage);
+
+      fixture.detectChanges();
+
+      httpMock.expectOne('/api/facilities').flush([
+        activeFacility,
+        inactiveFacility
+      ]);
+
+      fixture.detectChanges();
+
+      const element = fixture.nativeElement as HTMLElement;
+
+      const creating = mode === 'create';
+
+      const openSelector = creating
+        ? '.create-button'
+        : '.edit-button';
+
+      element.querySelector<HTMLButtonElement>(openSelector)!.click();
+
+      fixture.detectChanges();
+
+      const panelSelector = creating ? '.create-panel' : '.edit-panel';
+
+      const panel = element.querySelector<HTMLElement>(panelSelector)!;
+
+      expect(panel).not.toBeNull();
+
+      const prefix = creating ? 'facility' : 'edit-facility';
+
+      const fields: Record<string, string> = {
+        name: 'Audit facility pending',
+        city: 'Sevilla',
+        latitude: '37.888200',
+        longitude: '-4.779400'
+      };
+
+      if (creating) {
+        fields['code'] = 'FAC-AUD006';
+      }
+
+      for (const [field, value] of Object.entries(fields)) {
+        const input = panel.querySelector<HTMLInputElement>(
+          `#${prefix}-${field}`
+        )!;
+
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      panel.querySelector('form')!.dispatchEvent(
+        new Event('submit', {
+          bubbles: true,
+          cancelable: true
+        })
+      );
+
+      fixture.detectChanges();
+
+      const url = creating
+        ? '/api/facilities'
+        : `/api/facilities/${activeFacility.id}`;
+
+      const request = httpMock.expectOne(url);
+
+      expect(request.request.method).toBe(
+        creating ? 'POST' : 'PUT'
+      );
+
+      expect(request.request.body.latitude).toBe(37.8882);
+      expect(request.request.body.longitude).toBe(-4.7794);
+
+      const selectors = [
+        '.create-button',
+        '.edit-button',
+        '.activate-button',
+        '.deactivate-button'
+      ];
+
+      for (const selector of selectors) {
+        const buttons = fixture.debugElement.queryAll(
+          By.css(selector)
+        );
+
+        expect(buttons.length).toBeGreaterThan(0);
+
+        for (const button of buttons) {
+          expect(
+            (button.nativeElement as HTMLButtonElement).disabled
+          ).toBe(true);
+
+          // Bypass native disabled behavior to verify
+          // the corresponding TypeScript handler.
+          button.triggerEventHandler(
+            'click',
+            new MouseEvent('click')
+          );
+
+          fixture.detectChanges();
+
+          expect(element.querySelector(panelSelector)).toBe(panel);
+          expect(element.querySelector('.activation-panel')).toBeNull();
+          expect(element.querySelector('.deactivation-panel')).toBeNull();
+          expect(request.cancelled).toBe(false);
+        }
+      }
+
+      if (!creating) {
+        const child = fixture.debugElement.query(
+          By.css('app-facility-edit-form')
+        ).componentInstance;
+
+        // Also verify the parent cancellation handler.
+        child.cancelled.emit();
+        fixture.detectChanges();
+
+        expect(element.querySelector(panelSelector)).toBe(panel);
+        expect(request.cancelled).toBe(false);
+      }
+
+      expect(
+        panel.querySelector<HTMLInputElement>(
+          `#${prefix}-name`
+        )!.value
+      ).toBe('Audit facility pending');
+
+      request.flush(
+        { title: 'Save failed' },
+        { status: 500, statusText: 'Server Error' }
+      );
+
+      fixture.detectChanges();
+
+      expect(element.querySelector(panelSelector)).toBe(panel);
+
+      expect(
+        panel.querySelector<HTMLInputElement>(
+          `#${prefix}-latitude`
+        )!.value
+      ).toBe('37.888200');
+
+      expect(
+        panel.querySelector<HTMLInputElement>(
+          `#${prefix}-longitude`
+        )!.value
+      ).toBe('-4.779400');
+
+      for (const selector of selectors) {
+        const buttons = Array.from(
+          element.querySelectorAll<HTMLButtonElement>(selector)
+        );
+
+        expect(buttons.every(button => !button.disabled)).toBe(true);
+      }
+
+      // Normal cancellation is available again.
+      const cancel = creating
+        ? element.querySelector<HTMLButtonElement>('.create-button')!
+        : panel.querySelector<HTMLButtonElement>('.cancel-button')!;
+
+      expect(cancel.disabled).toBe(false);
+
+      cancel.click();
+      fixture.detectChanges();
+
+      expect(element.querySelector(panelSelector)).toBeNull();
+
+      httpMock.expectNone(url);
+      httpMock.expectNone(
+        `/api/facilities/${activeFacility.id}/deactivate`
+      );
+      httpMock.expectNone(
+        `/api/facilities/${inactiveFacility.id}/activate`
+      );
+    }
+  );
 });

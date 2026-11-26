@@ -196,4 +196,95 @@ describe('FacilityEditForm GIS', () => {
       `/api/facilities/${original.id}`
     );
   });
+
+  it.each([true, false])(
+    'locks all edit fields and preserves coordinates (success=%s)',
+    succeeds => {
+      const form = mount();
+
+      form.fill('name', 'Updated audit facility');
+      form.fill('latitude', '36.721300');
+      form.fill('longitude', '0');
+
+      const controls = Array.from(
+        form.element.querySelectorAll<HTMLInputElement>('form input')
+      );
+
+      expect(controls).toHaveLength(5);
+
+      const originalValues = controls.map(control => control.value);
+
+      const cancelButton =
+        form.element.querySelector<HTMLButtonElement>('.cancel-button')!;
+
+      let cancelled = false;
+
+      form.fixture.componentInstance.cancelled.subscribe(() => {
+        cancelled = true;
+      });
+
+      form.submit();
+
+      expect(form.fixture.componentInstance.saving()).toBe(true);
+      expect(controls.every(control => control.disabled)).toBe(true);
+      expect(cancelButton.disabled).toBe(true);
+
+      cancelButton.click();
+      expect(cancelled).toBe(false);
+
+      form.submit();
+
+      const url = `/api/facilities/${original.id}`;
+
+      const request = httpMock.expectOne(url);
+
+      expect(request.request.method).toBe('PUT');
+
+      expect(request.request.body).toEqual({
+        name: 'Updated audit facility',
+        city: original.city,
+        address: original.address,
+        latitude: 36.7213,
+        longitude: 0
+      });
+
+      if (succeeds) {
+        request.flush(null, {
+          status: 204,
+          statusText: 'No Content'
+        });
+      } else {
+        request.flush(
+          { title: 'Save failed' },
+          { status: 500, statusText: 'Server Error' }
+        );
+      }
+
+      form.fixture.detectChanges();
+
+      expect(form.fixture.componentInstance.saving()).toBe(false);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+      expect(cancelButton.disabled).toBe(false);
+
+      expect(controls.map(control => control.value))
+        .toEqual(originalValues);
+
+      if (!succeeds) {
+        expect(form.element.querySelector('.save-error'))
+          .not.toBeNull();
+
+        // Verify that geographic range validation was restored.
+        form.fill('latitude', '91');
+        form.submit();
+
+        expect(
+          form.input('latitude')
+            .closest('.form-field')
+            ?.querySelector('.field-error')
+        ).not.toBeNull();
+      }
+
+      httpMock.expectNone(url);
+    }
+  );
 });

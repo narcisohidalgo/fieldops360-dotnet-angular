@@ -1,5 +1,9 @@
 # Phase 12 — Real-Time Operations with SignalR
 
+> **Phase 15 audit update:** Manager-group broadcasting has been
+> replaced by connection tracking and publication-time Identity
+> validation. The original Phase 12 test results remain historical.
+
 ## Status
 
 Implemented locally on 2026-11-25.
@@ -34,7 +38,7 @@ Flow:
 1. An authenticated user changes an incident or work order.
 2. The application service persists and validates the change.
 3. The controller asks the event publisher to notify clients.
-4. SignalR sends a generic event to the managers group.
+4. The publisher revalidates manager permissions and sends a generic event to eligible connection IDs.
 5. Angular receives the event.
 6. The relevant component reloads authorized data through REST.
 7. Angular updates the visible list, KPIs or charts.
@@ -44,6 +48,7 @@ Event messages contain no entity details or private data.
 ## Backend components
 
 - `FieldOps.Api/Hubs/OperationsHub.cs`
+- `FieldOps.Api/Hubs/OperationsConnectionRegistry.cs`
 - `FieldOps.Api/Hubs/OperationsEventPublisher.cs`
 - `FieldOps.Api/Program.cs`
 - `IncidentsController`
@@ -74,12 +79,16 @@ The hub requires authentication under the
 This policy permits Administrator, Supervisor and Technician
 to establish an authenticated connection.
 
-However, only Administrator and Supervisor connections are
-added to the `operations:managers` SignalR group.
+Only Administrator and Supervisor connections are registered
+for operational notifications.
 
-Operational events are published only to that group.
+Before publication, the publisher checks account activation,
+current manager roles and security stamps in the Identity database.
 
-Technician accounts are not included in this group.
+Events are delivered to eligible connection IDs only.
+A failed authorization lookup does not fall back to broadcasting.
+
+Technician accounts are excluded from operational notifications.
 Their work-order access remains restricted by the existing
 server-side REST authorization and ownership checks.
 
@@ -232,12 +241,15 @@ scheduled for review during Phase 13.
 
 - Notifications are not durable or persisted in a database.
 - Events do not provide guaranteed delivery or historical replay.
-- SignalR group membership is local to the running server;
+- The connection registry is local to the running server;
   multi-instance scaling requires suitable infrastructure.
+- Permission revalidation prevents new notifications to stale
+  connections but does not forcibly disconnect their sockets.
+- Events already in flight cannot be recalled.
 - There is no transactional outbox for event delivery.
-- Backend SignalR authorization and event publication
-  do not yet have dedicated API integration tests.
-- Those integration tests belong to Phase 13.
+- Backend SignalR integration tests were added in Phase 13.
+  Phase 15 adds regressions for account deactivation, role removal,
+  password reset and reactivation with a fresh session.
 - Production observability, deployment, HTTPS hardening
   and distributed infrastructure belong to Phase 14.
 - GitHub Actions CI was prepared in advance as groundwork

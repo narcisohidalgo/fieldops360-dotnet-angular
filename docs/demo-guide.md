@@ -389,11 +389,14 @@ Show the testing strategy:
 - Playwright browser and end-to-end tests.
 - Docker production-build browser tests.
 
-The Phase 14 consolidated local validation recorded
-794 successful automated test scenarios.
+The Phase 15 audit has validated 870 application tests locally,
+including 559 Angular tests across 43 files.
 
-The Angular test suite contained 489 tests across
-41 test files.
+Three Docker browser scenarios remain pending final CI,
+bringing the expected complete test total to 873.
+
+The Angular line coverage is 92.27%.
+The original Phase 14 baseline recorded 794 passing scenarios.
 
 Show the GitHub Actions workflow and explain the
 separate backend, frontend, integration, Docker

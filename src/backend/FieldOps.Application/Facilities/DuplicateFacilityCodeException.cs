@@ -3,7 +3,16 @@
 public sealed class DuplicateFacilityCodeException : Exception
 {
     public DuplicateFacilityCodeException(string code)
-        : base($"A facility with code '{code}' already exists.")
+        : this(code, null)
+    {
+    }
+
+    public DuplicateFacilityCodeException(
+        string code,
+        Exception? innerException)
+        : base(
+            $"A facility with code '{code}' already exists.",
+            innerException)
     {
     }
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FieldOps.Api.Security;
 
 namespace FieldOps.Api.Controllers;
 
@@ -10,6 +11,7 @@ public sealed class LoginRequest
     public string Email { get; init; } = string.Empty;
 
     [Required]
+    [MaxLength(PasswordLimits.MaxLength)]
     public string Password { get; init; } = string.Empty;
 }
 

@@ -94,6 +94,7 @@ export class TechnicianCreateForm {
     const values = this.form.getRawValue();
 
     this.isSaving.set(true);
+    this.form.disable({ emitEvent: false });
 
     this.technicianService.create({
       code: values.code.trim(),
@@ -105,11 +106,13 @@ export class TechnicianCreateForm {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (technician) => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
           this.form.reset();
           this.created.emit(technician);
         },
         error: (error: unknown) => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
 
           if (error instanceof HttpErrorResponse) {

@@ -1,5 +1,13 @@
 # Phase 13 — Integration Testing and Code Quality
 
+> **Phase 15 audit update:** The current native integration suite
+> contains 43 passing non-browser tests. Angular contains 559
+> passing tests across 43 files. The mocked browser test and
+> four real browser scenarios also pass.
+>
+> The original Phase 13 coverage and results below remain
+> historical. See the [main README](../README.md) for current metrics.
+
 > **Phase 14 update:** The Phase 13 test results and coverage figures documented here are historical validation evidence. Phase 14 introduces Docker-based SQL integration testing, additional Leaflet interoperability tests and production browser regression tests. See [Phase 14 Docker and CI/CD](phase14-docker-cicd.md) for the extended strategy and current verification status.
 
 ## Overview
@@ -405,13 +413,15 @@ be committed to the repository.
 
 ## CI scope and remaining limitations
 
-The GitHub Actions workflow currently runs Release builds,
+The original Phase 13 CI baseline ran Release builds,
 database-independent backend tests, Angular unit tests
 and the Angular production build.
 
-SQL Server-backed integration and Playwright E2E tests
-are locally validated but are not executed by the
-current CI workflow.
+Phase 14 subsequently integrated SQL Server-backed testing
+and Playwright E2E execution into GitHub Actions.
+
+Phase 15 adds structured TRX and JSON report validation
+to reject failed, skipped or incomplete mandatory suites.
 
 No minimum coverage threshold is enforced.
 
@@ -420,8 +430,9 @@ complete penetration-test coverage, load-testing results,
 cross-browser compatibility or comprehensive multi-instance
 deployment behavior.
 
-Phase 14 will address Docker, deployment infrastructure,
-production configuration and further CI/CD integration.
+Phase 14 addresses local Docker deployment, production
+configuration and extended CI/CD integration.
+Final Phase 15 CI verification remains pending.
 
 See also:
 

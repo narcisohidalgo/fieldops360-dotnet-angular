@@ -15,7 +15,7 @@
       <button
         type="button"
         class="create-user-button"
-        [disabled]="isLoading() || isSaving() || statusTarget() !== null || selectedEditUser() !== null || selectedPasswordUser() !== null"
+        [disabled]="isLoading() || isSaving() || isFormSaving() || statusTarget() !== null || selectedEditUser() !== null || selectedPasswordUser() !== null"
         [attr.aria-expanded]="showCreateForm()"
         aria-controls="user-create-panel"
         (click)="toggleCreateForm()"

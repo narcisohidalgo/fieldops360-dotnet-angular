@@ -1,6 +1,25 @@
-@FieldOps.Api_HostAddress = http://localhost:5036
+@baseUrl = http://localhost:5080
 
-GET {{FieldOps.Api_HostAddress}}/weatherforecast/
+### Public system status - expected HTTP 200
+GET {{baseUrl}}/api/system/status
 Accept: application/json
 
-###
+### Antiforgery token - expected HTTP 200
+GET {{baseUrl}}/api/auth/csrf
+Accept: application/json
+
+### Current session - expected HTTP 401 without authentication
+GET {{baseUrl}}/api/auth/me
+Accept: application/json
+
+### Protected facilities - expected HTTP 401 without authentication
+GET {{baseUrl}}/api/facilities
+Accept: application/json
+
+### Protected dashboard - expected HTTP 401 without authentication
+GET {{baseUrl}}/api/dashboard/summary
+Accept: application/json
+
+# Authenticated requests require a valid Identity session cookie.
+# State-changing requests also require the X-XSRF-TOKEN header.
+# Do not store credentials, cookies or antiforgery tokens in this file.

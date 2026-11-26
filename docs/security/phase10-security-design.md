@@ -1,5 +1,17 @@
 # Phase 10 - Authentication, Users, Roles and Security
 
+> **Phase 15 audit update:** The original Phase 10 results below
+> are retained as historical evidence. Identity and API integration
+> tests were subsequently implemented in Phase 13.
+>
+> Phase 15 adds a consistent 1024-character password maximum,
+> concurrent administrative conflict handling, centralized
+> frontend session expiry handling and current-permission
+> validation for SignalR notifications.
+>
+> See the [main README](../../README.md) and
+> [real-time documentation](../phase12-realtime.md) for current behavior.
+
 ## Status
 
 Phase 10 implementation and functional verification completed on 2026-11-24. Final audit and Git publication completed on 2026-11-25 (commit 4fba51440dc03dbdec38b8e6ba4519526105b840).
@@ -177,7 +189,7 @@ ownership of an authenticated session.
 - QA accounts deactivated and temporary technician link released.
 - Identity migration and SQL Server WorkOrders RowVersion reviewed.
 
-### Remaining work
+### Phase 10 historical follow-up
 
 - Final Phase 10 code, migration and documentation audit completed before publication.
 - Add dedicated automated ASP.NET Core Identity/API integration tests in a future testing phase.

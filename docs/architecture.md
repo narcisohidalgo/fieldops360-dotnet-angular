@@ -163,6 +163,9 @@ Security controls include:
 - Antiforgery validation for state-changing requests.
 - Server-side role authorization.
 - Account lockout and password requirements.
+- Consistent maximum password length of 1024 characters.
+- Serializable administrative mutations with conflict handling.
+- Centralized frontend handling of expired operational sessions.
 - Restricted technician access to assigned work orders.
 - Explicitly trusted reverse-proxy configuration.
 
@@ -179,14 +182,16 @@ sequenceDiagram
     participant HUB as SignalR Operations Hub
     participant B as Administrator or Supervisor Browser B
 
-    B->>HUB: Connect and join authorized managers group
+    B->>HUB: Register authenticated manager connection
 
     A->>API: Update incident or work order
     API->>API: Validate authorization and business rules
     API->>DB: Persist changes
     DB-->>API: Persistence successful
 
-    API->>HUB: Publish generic event to managers group
+    API->>DB: Revalidate active manager roles and security stamps
+    DB-->>API: Eligible connection identities
+    API->>HUB: Publish generic event to eligible connections
     HUB-->>B: IncidentsChanged or WorkOrdersChanged
     API-->>A: Successful REST response
 
@@ -206,9 +211,21 @@ authorized REST endpoints.
 
 SQL Server remains the source of truth for persisted data.
 
-Only authenticated Administrator and Supervisor clients
-join the authorized managers group and receive these
-operational change notifications.
+Administrator and Supervisor connections are tracked by
+a server-side connection registry.
+
+Before publishing, the event publisher revalidates account
+activation, current manager roles and security stamps against
+the Identity database. Notifications are sent only to eligible
+connection IDs.
+
+This prevents stale connections from continuing to receive
+new notifications after account deactivation, role removal
+or password reset. Existing sockets are not forcibly closed
+by this publication check, and in-flight events cannot be recalled.
+
+The registry is local to one application instance.
+Distributed deployment requires additional coordination.
 
 If notification publication fails after persistence,
 the failure is logged without rolling back the saved

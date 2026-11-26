@@ -4,6 +4,7 @@ import {
   provideHttpClientTesting
 } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { Subject } from 'rxjs';
 import { RealtimeService } from '../../../core/services/realtime.service';
 import {
@@ -1430,4 +1431,151 @@ describe('IncidentsPage', () => {
       element.querySelector('app-incident-create-form')
     ).toBeNull();
   });
+
+  it.each(['create', 'edit'])(
+    'preserves the %s form during realtime refresh and pending cancellation',
+    mode => {
+      const { fixture, element } = setup();
+
+      flushLoad(fixture);
+
+      const creating = mode === 'create';
+
+      const openSelector = creating
+        ? '.create-button'
+        : '.edit-button';
+
+      element.querySelector<HTMLButtonElement>(openSelector)!.click();
+      fixture.detectChanges();
+
+      const childSelector = creating
+        ? 'app-incident-create-form'
+        : 'app-incident-edit-form';
+
+      const child = element.querySelector<HTMLElement>(
+        childSelector
+      )!;
+
+      expect(child).not.toBeNull();
+
+      const prefix = creating
+        ? '#incident-'
+        : '#edit-incident-';
+
+      if (creating) {
+        fillField(child, '#incident-facility', facilityId);
+        fixture.detectChanges();
+        fillField(child, '#incident-asset', assetId);
+      }
+
+      fillField(child, `${prefix}title`, 'Audit incident pending');
+
+      const title = child.querySelector<HTMLInputElement>(
+        `${prefix}title`
+      )!;
+
+      submitForm(child);
+      fixture.detectChanges();
+
+      const url = creating
+        ? '/api/incidents'
+        : `/api/incidents/${incidentId}`;
+
+      const request = httpMock.expectOne(url);
+
+      expect(request.request.method).toBe(
+        creating ? 'POST' : 'PUT'
+      );
+
+      expect(title.disabled).toBe(true);
+
+      const conflictingButtons = Array.from(
+        element.querySelectorAll<HTMLButtonElement>(
+          '.create-button, .edit-button, .status-button'
+        )
+      );
+
+      expect(conflictingButtons.length).toBeGreaterThanOrEqual(3);
+
+      expect(
+        conflictingButtons.every(button => button.disabled)
+      ).toBe(true);
+
+      // Simulate a SignalR event from another session.
+      realtimeEvents.next();
+      fixture.detectChanges();
+
+      expect(element.querySelector(childSelector)).toBe(child);
+      expect(request.cancelled).toBe(false);
+
+      flushLoad(fixture, [
+        { ...incident, title: 'Server refreshed incident' }
+      ]);
+
+      expect(element.querySelector(childSelector)).toBe(child);
+      expect(title.value).toBe('Audit incident pending');
+      expect(title.disabled).toBe(true);
+      expect(request.cancelled).toBe(false);
+
+      // Verify the actual parent handler, bypassing
+      // the native button's disabled behavior.
+      if (creating) {
+        const createButton = fixture.debugElement.query(
+          By.css('.create-button')
+        );
+
+        expect(createButton.nativeElement.disabled).toBe(true);
+
+        createButton.triggerEventHandler(
+          'click',
+          new MouseEvent('click')
+        );
+
+        expect(
+          child.querySelector<HTMLSelectElement>(
+            '#incident-asset'
+          )!.value
+        ).toBe(assetId);
+      } else {
+        const editComponent = fixture.debugElement.query(
+          By.css(childSelector)
+        ).componentInstance;
+
+        editComponent.cancelled.emit();
+      }
+
+      fixture.detectChanges();
+
+      expect(element.querySelector(childSelector)).toBe(child);
+      expect(request.cancelled).toBe(false);
+
+      request.flush(
+        { title: 'Save failed' },
+        {
+          status: creating ? 500 : 409,
+          statusText: creating ? 'Server Error' : 'Conflict'
+        }
+      );
+
+      fixture.detectChanges();
+
+      expect(element.querySelector(childSelector)).toBe(child);
+      expect(title.disabled).toBe(false);
+      expect(title.value).toBe('Audit incident pending');
+
+      // Normal cancellation must be available after failure.
+      const cancel = creating
+        ? element.querySelector<HTMLButtonElement>('.create-button')!
+        : child.querySelector<HTMLButtonElement>('.cancel-button')!;
+
+      expect(cancel.disabled).toBe(false);
+
+      cancel.click();
+      fixture.detectChanges();
+
+      expect(element.querySelector(childSelector)).toBeNull();
+
+      httpMock.expectNone(url);
+    }
+  );
 });

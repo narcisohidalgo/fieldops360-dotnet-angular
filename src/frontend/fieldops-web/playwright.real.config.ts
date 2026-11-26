@@ -7,7 +7,9 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 30_000,
-  reporter: 'list',
+  reporter: process.env.PLAYWRIGHT_JSON_OUTPUT_FILE
+    ? [['list'], ['json']]
+    : 'list',
 
   use: {
     baseURL: 'http://127.0.0.1:4292',

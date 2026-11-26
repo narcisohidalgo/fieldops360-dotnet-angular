@@ -589,4 +589,97 @@ describe('IncidentEditForm', () => {
       `/api/incidents/${incidentId}`
     );
   });
+
+  it.each([true, false])(
+    'locks edit controls and restores them after the response (success=%s)',
+    succeeds => {
+      const { fixture, element } = setup();
+
+      fillField(element, 'title', 'Updated audit incident');
+      fillField(element, 'description', 'Updated audit description');
+      fillField(element, 'priority', String(IncidentPriority.Critical));
+
+      const controls = Array.from(element.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >('form input, form select, form textarea'));
+
+      expect(controls).toHaveLength(3);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      const originalValues = controls.map(control => control.value);
+
+      const cancelButton = element.querySelector<HTMLButtonElement>(
+        '.cancel-button'
+      )!;
+
+      let cancelled = false;
+      let saved = false;
+
+      fixture.componentInstance.cancelled.subscribe(() => {
+        cancelled = true;
+      });
+
+      fixture.componentInstance.saved.subscribe(() => {
+        saved = true;
+      });
+
+      submitForm(element);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(true);
+      expect(controls.every(control => control.disabled)).toBe(true);
+      expect(cancelButton.disabled).toBe(true);
+
+      cancelButton.click();
+
+      expect(cancelled).toBe(false);
+
+      // A second submission must not create another PUT.
+      submitForm(element);
+
+      const url = `/api/incidents/${incidentId}`;
+      const request = httpMock.expectOne(url);
+
+      expect(request.request.method).toBe('PUT');
+
+      expect(request.request.body).toEqual({
+        title: 'Updated audit incident',
+        description: 'Updated audit description',
+        priority: IncidentPriority.Critical
+      });
+
+      if (succeeds) {
+        request.flush(null, {
+          status: 204,
+          statusText: 'No Content'
+        });
+      } else {
+        request.flush(
+          { title: 'Conflict' },
+          { status: 409, statusText: 'Conflict' }
+        );
+      }
+
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(false);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+      expect(cancelButton.disabled).toBe(false);
+      expect(saved).toBe(succeeds);
+
+      expect(controls.map(control => control.value))
+        .toEqual(originalValues);
+
+      if (!succeeds) {
+        const error = element.querySelector('.save-error');
+
+        expect(error).not.toBeNull();
+
+        expect(error!.textContent)
+          .toContain('Actualiza el listado');
+      }
+
+      httpMock.expectNone(url);
+    }
+  );
 });

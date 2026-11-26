@@ -436,4 +436,121 @@ describe('FacilityCreateForm', () => {
       httpMock.expectNone('/api/facilities');
     });
   }
+
+  it.each([true, false])(
+    'locks all create fields including coordinates (success=%s)',
+    succeeds => {
+      const fixture = TestBed.createComponent(FacilityCreateForm);
+      fixture.detectChanges();
+
+      const element = fixture.nativeElement as HTMLElement;
+
+      const fields: Record<string, string> = {
+        code: 'FAC-AUD006',
+        name: 'Audit facility',
+        city: 'Sevilla',
+        address: 'Audit address',
+        latitude: '0',
+        longitude: '-4.779400'
+      };
+
+      for (const [field, value] of Object.entries(fields)) {
+        const input = element.querySelector<HTMLInputElement>(
+          `#facility-${field}`
+        )!;
+
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      const controls = Array.from(
+        element.querySelectorAll<HTMLInputElement>('form input')
+      );
+
+      expect(controls).toHaveLength(6);
+
+      const originalValues = controls.map(control => control.value);
+
+      const form = element.querySelector('form')!;
+
+      const submit = () => form.dispatchEvent(
+        new Event('submit', {
+          bubbles: true,
+          cancelable: true
+        })
+      );
+
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      submit();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(true);
+      expect(controls.every(control => control.disabled)).toBe(true);
+
+      submit();
+
+      const request = httpMock.expectOne('/api/facilities');
+
+      expect(request.request.method).toBe('POST');
+
+      expect(request.request.body).toEqual({
+        code: 'FAC-AUD006',
+        name: 'Audit facility',
+        city: 'Sevilla',
+        address: 'Audit address',
+        latitude: 0,
+        longitude: -4.7794
+      });
+
+      if (succeeds) {
+        request.flush({
+          id: '00000000-0000-0000-0000-000000000099',
+          ...request.request.body,
+          isActive: true
+        }, {
+          status: 201,
+          statusText: 'Created'
+        });
+      } else {
+        request.flush(
+          { title: 'Save failed' },
+          { status: 500, statusText: 'Server Error' }
+        );
+      }
+
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(false);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      if (succeeds) {
+        expect(controls.map(control => control.value))
+          .toEqual(['', '', '', '', '', '']);
+      } else {
+        expect(controls.map(control => control.value))
+          .toEqual(originalValues);
+
+        expect(element.querySelector('.save-error'))
+          .not.toBeNull();
+
+        // Coordinate pair validation must still work
+        // after re-enabling the form.
+        const longitude = element.querySelector<HTMLInputElement>(
+          '#facility-longitude'
+        )!;
+
+        longitude.value = '';
+        longitude.dispatchEvent(new Event('input', { bubbles: true }));
+
+        submit();
+        fixture.detectChanges();
+
+        expect(element.querySelector('.field-error'))
+          .not.toBeNull();
+      }
+
+      httpMock.expectNone('/api/facilities');
+    }
+  );
 });

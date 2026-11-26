@@ -4,7 +4,8 @@ import {
   DestroyRef,
   inject,
   OnInit,
-  signal
+  signal,
+  viewChild
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -109,6 +110,8 @@ export class IncidentsPage implements OnInit {
   private readonly facilityService = inject(FacilityService);
   private readonly assetService = inject(AssetService);
   private readonly destroyRef = inject(DestroyRef);
+
+  private readonly editForm = viewChild(IncidentEditForm);
 
   private loadSequence = 0;
 
@@ -244,6 +247,10 @@ export class IncidentsPage implements OnInit {
   }
 
   protected cancelEdit(): void {
+    if (this.editForm()?.saving()) {
+      return;
+    }
+
     this.selectedIncident.set(null);
   }
 

@@ -4,12 +4,77 @@ using FieldOps.Api.Security;
 using FieldOps.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 
 namespace FieldOps.Api.Services;
 
 public sealed partial class UserManagementService
 {
-    public async Task<ManagedUserDto?> UpdateAsync(
+    public Task<ManagedUserDto?> UpdateAsync(
+        Guid id,
+        UpdateManagedUserRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteMutationAsync(() =>
+            UpdateCoreAsync(id, request, cancellationToken));
+    }
+
+    public Task<ManagedUserDto?> SetActiveAsync(
+        Guid id,
+        bool isActive,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteMutationAsync(() =>
+            SetActiveCoreAsync(id, isActive, cancellationToken));
+    }
+
+    public Task<bool> ResetPasswordAsync(
+        Guid id,
+        ResetManagedUserPasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteMutationAsync(() =>
+            ResetPasswordCoreAsync(id, request, cancellationToken));
+    }
+
+    private static async Task<T> ExecuteMutationAsync<T>(
+        Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (Exception ex) when (IsSqlConflict(ex))
+        {
+            throw new UserManagementException(
+                Conflict,
+                "Se ha detectado un conflicto concurrente. " +
+                "Actualiza e intentalo de nuevo.");
+        }
+    }
+
+    private static bool IsSqlConflict(Exception exception)
+    {
+        // EF Core may wrap transient SQL errors in an
+        // InvalidOperationException or DbUpdateException.
+        // Inspect the entire exception chain without
+        // suppressing unrelated application failures.
+        for (
+            Exception? current = exception;
+            current is not null;
+            current = current.InnerException)
+        {
+            if (current is SqlException sql &&
+                (sql.Number is 2601 or 2627 or 1205))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private async Task<ManagedUserDto?> UpdateCoreAsync(
         Guid id,
         UpdateManagedUserRequest request,
         CancellationToken cancellationToken = default)
@@ -103,7 +168,7 @@ public sealed partial class UserManagementService
         return await ToDtoAsync(user);
     }
 
-    public async Task<ManagedUserDto?> SetActiveAsync(
+    private async Task<ManagedUserDto?> SetActiveCoreAsync(
         Guid id,
         bool isActive,
         CancellationToken cancellationToken = default)
@@ -167,7 +232,7 @@ public sealed partial class UserManagementService
         return await ToDtoAsync(user);
     }
 
-    public async Task<bool> ResetPasswordAsync(
+    private async Task<bool> ResetPasswordCoreAsync(
         Guid id,
         ResetManagedUserPasswordRequest request,
         CancellationToken cancellationToken = default)
@@ -178,7 +243,7 @@ public sealed partial class UserManagementService
         var password = request.NewPassword;
 
         if (string.IsNullOrWhiteSpace(password) ||
-            password.Length > 1024)
+            password.Length > PasswordLimits.MaxLength)
         {
             throw new UserManagementException(
                 BadRequest,

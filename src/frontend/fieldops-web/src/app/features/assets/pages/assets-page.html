@@ -11,7 +11,7 @@
     <button
       type="button"
       class="create-button"
-      [disabled]="isLoading() || !hasActiveFacilities() || selectedAsset() !== null || statusTarget() !== null || isUpdatingStatus()"
+      [disabled]="isLoading() || !hasActiveFacilities() || selectedAsset() !== null || statusTarget() !== null || isUpdatingStatus() || isFormSaving()"
       [attr.aria-expanded]="showCreateForm()"
       aria-controls="asset-create-panel"
       (click)="toggleCreateForm()"

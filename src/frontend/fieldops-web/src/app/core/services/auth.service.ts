@@ -2,6 +2,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   catchError,
+  defer,
+  map,
   Observable,
   of,
   switchMap,
@@ -24,6 +26,14 @@ export class AuthService {
   private readonly csrf = inject(CsrfService);
 
   private readonly userState = signal<AuthUser | null>(null);
+
+  // Distinguish authentication lifetimes, including new
+  // logins made by the same user.
+  private revision = 0;
+
+  get sessionRevision(): number {
+    return this.revision;
+  }
 
   readonly user = this.userState.asReadonly();
 
@@ -49,29 +59,45 @@ export class AuthService {
 
   // Obtener la sesion existente tras recargar Angular.
   loadSession(): Observable<AuthUser | null> {
-    return this.http.get<AuthUser>('/api/auth/me').pipe(
-      tap(user => this.userState.set(user)),
-      catchError((error: unknown) => {
-        // Una comprobacion fallida no debe conservar
-        // una identidad anterior como sesion verificada.
-        this.userState.set(null);
+    return defer(() => {
+      const revision = this.sessionRevision;
 
-        // El token CSRF anterior puede pertenecer
-        // a una identidad que ya no es valida.
-        this.csrf.clear();
+      return this.http.get<AuthUser>('/api/auth/me').pipe(
+        map(user => {
+          // A previous verification must never restore
+          // an identity invalidated while it was in flight.
+          if (revision !== this.sessionRevision) {
+            return this.userState();
+          }
 
-        if (
-          error instanceof HttpErrorResponse &&
-          error.status === 401
-        ) {
-          return of(null);
-        }
+          if (this.userState()?.id !== user.id) {
+            this.revision++;
+            this.csrf.clear();
+          }
 
-        // Los errores de red y servidor se comunican
-        // a los componentes para mostrar el problema.
-        return throwError(() => error);
-      })
-    );
+          this.userState.set(user);
+
+          return user;
+        }),
+        catchError((error: unknown) => {
+          // A stale verification cannot clear a newer login.
+          if (revision !== this.sessionRevision) {
+            return of(this.userState());
+          }
+
+          this.clearLocalSession();
+
+          if (
+            error instanceof HttpErrorResponse &&
+            error.status === 401
+          ) {
+            return of(null);
+          }
+
+          return throwError(() => error);
+        })
+      );
+    });
   }
 
   // Inicio de sesion con token antifalsificacion.
@@ -89,6 +115,7 @@ export class AuthService {
         )
       ),
       tap(user => {
+        this.revision++;
         this.userState.set(user);
 
         // El siguiente POST necesita un token emitido
@@ -144,7 +171,25 @@ export class AuthService {
     );
   }
 
+  /**
+   * Invalidate only the authenticated session associated
+   * with the request that received HTTP 401.
+   */
+  invalidateSession(expectedRevision: number): boolean {
+    if (
+      expectedRevision !== this.sessionRevision ||
+      !this.isAuthenticated()
+    ) {
+      return false;
+    }
+
+    this.clearLocalSession();
+
+    return true;
+  }
+
   private clearLocalSession(): void {
+    this.revision++;
     this.userState.set(null);
     this.csrf.clear();
   }

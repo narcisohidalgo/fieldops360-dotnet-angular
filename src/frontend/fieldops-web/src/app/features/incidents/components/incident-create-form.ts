@@ -151,6 +151,7 @@ export class IncidentCreateForm {
     }
 
     this.isSaving.set(true);
+    this.form.disable({ emitEvent: false });
     this.savingChange.emit(true);
 
     this.incidentService.create({
@@ -163,12 +164,14 @@ export class IncidentCreateForm {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: incident => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
           this.savingChange.emit(false);
           this.form.reset();
           this.created.emit(incident);
         },
         error: (error: unknown) => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
           this.savingChange.emit(false);
 

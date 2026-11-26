@@ -347,11 +347,17 @@ describe('App', () => {
 
     expect(link).not.toBeNull();
 
-    link!.dispatchEvent(new MouseEvent('click', {
+    const clickEvent = new MouseEvent('click', {
       bubbles: true,
       cancelable: true,
       button: 1
-    }));
+    });
+
+    // Prevent native document navigation in jsdom.
+    // This test verifies notification handling, not browser navigation.
+    clickEvent.preventDefault();
+
+    link!.dispatchEvent(clickEvent);
 
     fixture.detectChanges();
 

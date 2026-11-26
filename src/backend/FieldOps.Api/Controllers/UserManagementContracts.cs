@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FieldOps.Api.Security;
 
 namespace FieldOps.Api.Controllers;
 
@@ -32,6 +33,7 @@ public sealed class CreateManagedUserRequest
     public string DisplayName { get; init; } = string.Empty;
 
     [Required]
+    [MaxLength(PasswordLimits.MaxLength)]
     public string Password { get; init; } = string.Empty;
 
     [Required]
@@ -64,5 +66,6 @@ public sealed class UpdateManagedUserRequest
 public sealed class ResetManagedUserPasswordRequest
 {
     [Required]
+    [MaxLength(PasswordLimits.MaxLength)]
     public string NewPassword { get; init; } = string.Empty;
 }

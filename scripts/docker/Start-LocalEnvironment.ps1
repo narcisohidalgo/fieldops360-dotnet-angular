@@ -19,6 +19,96 @@ foreach ($variableName in $imageVariables) {
 
 try {
     if ($PublishedCommit) {
+
+        # Published images must match the checked-out installation files.
+        # Perform these checks before pulling images or initializing Docker.
+        $installationRoot = [IO.Path]::GetFullPath(
+            (Join-Path (Join-Path $PSScriptRoot "..") "..")
+        )
+
+        if (-not (Get-Command git -CommandType Application -ErrorAction SilentlyContinue)) {
+            throw "Git is required for installation from published images."
+        }
+
+        if (-not (Test-Path -LiteralPath (Join-Path $installationRoot ".git"))) {
+            throw "Published installation requires a Git checkout."
+        }
+
+        $checkoutRoot = git -C $installationRoot rev-parse --show-toplevel
+
+        if ($LASTEXITCODE -ne 0 -or
+            [string]::IsNullOrWhiteSpace($checkoutRoot)) {
+            throw "Unable to identify the installation Git checkout."
+        }
+
+        if ([IO.Path]::GetFullPath([string]$checkoutRoot) -ne $installationRoot) {
+            throw "Unexpected installation Git checkout root."
+        }
+
+        $localRevision = git -C $installationRoot rev-parse HEAD
+
+        if ($LASTEXITCODE -ne 0 -or
+            "$localRevision" -notmatch '^[a-fA-F0-9]{40}$') {
+            throw "Unable to determine the local source revision."
+        }
+
+        if ($localRevision.ToLowerInvariant() -cne
+            $PublishedCommit.ToLowerInvariant()) {
+            throw "Local source revision does not match PublishedCommit. Check out the requested commit before installing."
+        }
+
+        $installationFiles = @(
+            ".env.example"
+            "compose.yaml"
+            "scripts/docker/Initialize-LocalEnvironment.ps1"
+            "scripts/docker/Initialize-DatabaseRuntime.ps1"
+            "scripts/docker/Start-LocalEnvironment.ps1"
+            "scripts/docker/provision-runtime.sql"
+        )
+
+        foreach ($installationFile in $installationFiles) {
+
+            if (-not (Test-Path -LiteralPath (Join-Path $installationRoot $installationFile) -PathType Leaf)) {
+                throw "Required installation file is missing: $installationFile"
+            }
+
+            git -C $installationRoot ls-files --error-unmatch -- $installationFile | Out-Null
+
+            if ($LASTEXITCODE -ne 0) {
+                throw "Installation file is not tracked by Git: $installationFile"
+            }
+        }
+
+        $installationChanges = @(
+            git -C $installationRoot status --porcelain --untracked-files=all -- `
+                .env.example compose.yaml scripts/docker
+        )
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to verify installation file integrity."
+        }
+
+        if ($installationChanges.Count -ne 0) {
+            throw "Installation files contain local changes. Use clean installation files from PublishedCommit."
+        }
+
+        foreach ($alternateCompose in @(
+            "compose.yml"
+            "compose.override.yaml"
+            "compose.override.yml"
+            "docker-compose.yaml"
+            "docker-compose.yml"
+            "docker-compose.override.yaml"
+            "docker-compose.override.yml"
+        )) {
+            if (Test-Path -LiteralPath (Join-Path $installationRoot $alternateCompose)) {
+                throw "Unexpected alternate Compose file: $alternateCompose"
+            }
+        }
+
+        Write-Host "[OK] Local Git revision matches PublishedCommit." -ForegroundColor Green
+        Write-Host "[OK] Installation files match the clean Git checkout."
+
         $prefix = "ghcr.io/narcisohidalgo/fieldops360-dotnet-angular"
         $tag = "sha-" + $PublishedCommit.ToLowerInvariant()
 

@@ -669,4 +669,118 @@ describe('IncidentCreateForm', () => {
 
     httpMock.expectNone('/api/incidents');
   });
+
+  it.each([true, false])(
+    'locks create controls without clearing the selected asset (success=%s)',
+    succeeds => {
+      const { fixture, element } = setup();
+
+      fillValidForm(fixture, element);
+
+      const controls = Array.from(element.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >('form input, form select, form textarea'));
+
+      expect(controls).toHaveLength(5);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      const originalValues = controls.map(control => control.value);
+
+      const savingEvents: boolean[] = [];
+
+      fixture.componentInstance.savingChange.subscribe(
+        saving => savingEvents.push(saving)
+      );
+
+      submitForm(element);
+      fixture.detectChanges();
+
+      expect(controls.every(control => control.disabled)).toBe(true);
+
+      expect(
+        element.querySelector<HTMLSelectElement>(
+          '#incident-asset'
+        )!.value
+      ).toBe(assetId);
+
+      expect(savingEvents).toEqual([true]);
+
+      // Force a second submission while the POST is pending.
+      submitForm(element);
+
+      const request = httpMock.expectOne('/api/incidents');
+
+      expect(request.request.method).toBe('POST');
+
+      expect(request.request.body).toEqual({
+        facilityId,
+        assetId,
+        title: 'Fallo de arranque del tractor',
+        description: 'El motor no arranca',
+        priority: IncidentPriority.High
+      });
+
+      if (succeeds) {
+        request.flush(createdIncident, {
+          status: 201,
+          statusText: 'Created'
+        });
+      } else {
+        request.flush(
+          { title: 'Save failed' },
+          { status: 500, statusText: 'Server Error' }
+        );
+      }
+
+      fixture.detectChanges();
+
+      expect(savingEvents).toEqual([true, false]);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      if (succeeds) {
+        expect(
+          element.querySelector<HTMLInputElement>(
+            '#incident-title'
+          )!.value
+        ).toBe('');
+
+        expect(
+          element.querySelector<HTMLSelectElement>(
+            '#incident-facility'
+          )!.value
+        ).toBe('');
+
+        expect(
+          element.querySelector<HTMLSelectElement>(
+            '#incident-asset'
+          )!.value
+        ).toBe('');
+      } else {
+        expect(controls.map(control => control.value))
+          .toEqual(originalValues);
+
+        expect(element.querySelector('.save-error'))
+          .not.toBeNull();
+
+        // Verify that the original facility/asset relationship
+        // logic remains functional after the error.
+        fillField(element, 'facility', otherFacilityId);
+        fixture.detectChanges();
+
+        const asset = element.querySelector<HTMLSelectElement>(
+          '#incident-asset'
+        )!;
+
+        expect(asset.value).toBe('');
+
+        const options = Array.from(asset.options)
+          .map(option => option.value);
+
+        expect(options).toContain(otherAssetId);
+        expect(options).not.toContain(assetId);
+      }
+
+      httpMock.expectNone('/api/incidents');
+    }
+  );
 });

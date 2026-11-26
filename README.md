@@ -34,19 +34,22 @@ and container delivery.
 
 | Metric | Result |
 | --- | ---: |
-| Consolidated automated test scenarios | **794 passed** |
+| Phase 15 automated test scenarios | **870 passed locally; 3 Docker tests pending CI** |
 | Backend unit tests | 263 |
-| Backend integration tests | 35 |
-| Angular/Vitest tests | 489 |
-| Playwright browser scenarios | 7 |
-| Angular line coverage | 90.63% |
-| GitHub Actions validation and delivery jobs | 5/5 passed |
+| Backend integration tests | 43 |
+| Angular/Vitest tests | 559 |
+| Playwright browser scenarios | 5 passed locally; 3 Docker scenarios pending CI |
+| Angular line coverage | 92.27% |
+| GitHub Actions validation and delivery jobs | 5/5 passed for the previous published baseline |
 | Public application container images | 3 |
 | Reproducible fictional business records | 84 |
 | Supported user roles | 3 |
 
-Test and coverage figures refer to the consolidated
-Phase 14 validation completed on 25 November 2026.
+Test and coverage figures refer to the Phase 15 local audit
+completed on 26 November 2026. The updated CI/CD workflow
+and three Docker browser scenarios still require final execution.
+Earlier published CI/CD and container installation results
+are historical evidence, not verification of the updated revision.
 
 See the [testing section](#tests) and
 [Docker and CI/CD documentation](docs/phase14-docker-cicd.md)
@@ -142,6 +145,10 @@ in English.
 - Link Technician-role accounts to active technician records.
 - Restrict technicians to their own assigned work orders.
 - Apply password requirements, account lockout and security-stamp validation.
+- Limit passwords to 1024 characters across login, account management and bootstrap.
+- Handle conflicting concurrent administrative changes with HTTP 409.
+- Invalidate expired operational sessions and validate login return URLs.
+- Prevent duplicate form submissions while mutations are pending.
 - Keep credentials out of source control; public self-registration is disabled.
 
 | Role | Main permissions |
@@ -173,7 +180,7 @@ for implementation details, verification and limitations.
 
 ### Real-time operations and notifications (Phase 12)
 
-- Broadcast generic work-order and incident change events with ASP.NET Core SignalR.
+- Publish generic work-order and incident change events to eligible SignalR connections.
 - Refresh authorized Angular lists while preserving the current filters.
 - Automatically refresh dashboard KPIs and status charts.
 - Show in-memory operational notifications for Administrator and Supervisor.
@@ -181,6 +188,7 @@ for implementation details, verification and limitations.
 - Recover SignalR connections after failures, without creating false notifications.
 - Continue using REST authorization as the source of truth for operational data.
 - Keep SignalR notifications free of private entity payloads.
+- Track manager connections and revalidate active account status, role and security stamp before publishing notifications.
 - Require no additional SQL Server tables or migrations.
 
 See [Phase 12 technical documentation](docs/phase12-realtime.md)
@@ -351,10 +359,10 @@ depends on all four validation jobs.
 
 | Job | Responsibility |
 | --- | --- |
-| Backend | .NET restore, Release build, unit tests and database-independent API smoke tests |
-| Frontend | npm dependency installation, Angular/Vitest tests and production build |
-| Integration and E2E | Temporary SQL Server, isolated integration databases, mocked and real Playwright scenarios |
-| Docker | Container image builds, migrations, restricted SQL account, HTTPS checks and production browser regression tests |
+| Backend | .NET restore, Release build, unit tests and TRX report validation |
+| Frontend | npm dependencies, Vitest tests, JSON report validation and production build |
+| Integration and E2E | Isolated SQL Server, API integration, mocked and real Playwright scenarios, TRX and JSON validation |
+| Docker | Image builds, migrations, restricted SQL account, isolated administrator bootstrap, HTTPS and three required browser scenarios |
 | Publish | Publish versioned API, frontend and migration images to GHCR after all validation jobs succeed |
 
 Validation runs on pushes and pull requests targeting `main`,
@@ -381,7 +389,7 @@ metadata.
 This is continuous delivery to a container registry, not automatic
 deployment to a public server.
 
-**Verification status:** the expanded workflow passed static
+**Historical Phase 14 verification:** the original expanded workflow passed static
 Actionlint and ShellCheck validation and completed its first
 full remote execution successfully on 25 November 2026.
 
@@ -537,14 +545,21 @@ powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File ./scripts/docker/S
 
 On Linux, use `pwsh` instead of `powershell.exe`.
 
-The installer downloads and validates all three application
-images before starting SQL Server or applying migrations.
+Published-image installation requires Git and a checkout whose
+HEAD matches PublishedCommit. Deployment files must be tracked
+and clean, with no unexpected Compose override files.
+
+The installer checks these requirements before downloading
+images, then validates all three application images before
+starting SQL Server or applying migrations.
+
+Installation from local source does not require PublishedCommit.
 
 The corresponding repository configuration and provisioning
 scripts are still required, but Angular and .NET do not need
 to be compiled locally.
 
-**Status:** verified using publicly accessible GHCR packages
+**Historical installation evidence:** verified using publicly accessible GHCR packages
 published from commit:
 
 `13cb8c258bd09847a4e981c5d4357d4a1c045f2c`
@@ -794,6 +809,34 @@ GitHub Actions jobs. GHCR publication, public manifest access,
 image metadata and digests, and isolated application startup
 from the published images have also been verified.
 
+### Phase 15 audit validation
+
+| Test category | Passed locally |
+| --- | ---: |
+| .NET unit tests | 263 |
+| .NET integration tests | 43 |
+| Angular/Vitest unit tests | 559 |
+| Playwright with mocked API | 1 |
+| Playwright with real API and SQL Server | 4 |
+| **Total validated locally** | **870** |
+
+All selected tests passed without failures or skips.
+The 43 integration tests and native E2E suite also completed
+without leaving temporary SQL databases.
+
+The three Docker browser scenarios remain pending final CI execution,
+including real administrator authentication over HTTPS.
+The expected complete application test total is 873.
+
+The xUnit browser coordinator is excluded from the total.
+The 30 JSON validator tests, 14 TRX validator scenarios,
+eight Git revision guard scenarios and three negative CLI checks
+are tracked separately from application tests.
+
+The Angular production build completed without warnings.
+Initial raw bundle size: 383.35 kB.
+Estimated initial transfer size: 99.42 kB.
+
 ### Code coverage
 
 Historical Phase 13 backend coverage collected with Coverlet in Debug configuration:
@@ -812,14 +855,14 @@ percentages must not be added or averaged to represent combined coverage.
 The API and Infrastructure measurements include generated code and
 EF Core migrations where applicable.
 
-Phase 14 Angular coverage collected with Vitest and V8:
+Phase 15 Angular coverage collected with Vitest and V8:
 
 | Metric | Covered / Total | Coverage |
 | --- | ---: | ---: |
-| Lines | 3,718 / 4,102 | 90.63% |
-| Branches | 1,664 / 1,934 | 86.03% |
-| Functions | 530 / 629 | 84.26% |
-| Statements | 4,482 / 4,932 | 90.87% |
+| Lines | 3,944 / 4,274 | 92.27% |
+| Branches | 1,796 / 2,029 | 88.51% |
+| Functions | 575 / 655 | 87.78% |
+| Statements | 4,751 / 5,132 | 92.57% |
 
 The coverage reports are generated locally and are not committed.
 No coverage threshold is currently enforced.
@@ -842,6 +885,9 @@ interpretation and remaining limitations.
   demonstration dataset, role-specific demo accounts,
   fourteen application screenshots and functional walkthrough
   prepared and locally reviewed.
+- Phase 15 audit: backend concurrency, security, frontend
+  robustness and CI/CD test validation improvements implemented.
+  Final consolidated CI/CD verification remains pending.
 - Future production work: public hosting, trusted certificates,
   secure secret management, monitoring, backup and recovery,
   dependency and image security reviews.

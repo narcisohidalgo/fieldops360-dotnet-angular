@@ -1,5 +1,10 @@
 # Phase 11 — Operational Dashboard, KPIs and GIS
 
+> **Later implementation:** Phase 12 added automatic dashboard
+> refresh through SignalR. Phase 13 added automated integration
+> and browser testing, and Phase 14 added local HTTPS deployment.
+> The original Phase 11 validation results remain historical.
+
 ## Status
 
 Implemented and technically validated locally on 2026-11-25.
@@ -196,8 +201,8 @@ passed. The other 390 tests passed in the full run.
   physical addresses.
 - OpenStreetMap tiles require network access. Review tile
   provider usage policies before public deployment.
-- Dashboard metrics are refreshed on request, not in real time.
-- Automated end-to-end API/Identity and database integration
-  tests remain future work.
+- Dashboard metrics originally refreshed on request; automatic refresh was added in Phase 12.
+- Automated API, Identity, database and browser integration
+  tests were subsequently implemented in Phase 13.
 - Production HTTPS, security, deployment and monitoring
   hardening remain future work.

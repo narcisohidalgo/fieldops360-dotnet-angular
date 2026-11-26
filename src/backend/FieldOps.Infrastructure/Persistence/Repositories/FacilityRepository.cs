@@ -1,4 +1,6 @@
 ﻿using FieldOps.Application.Abstractions.Persistence;
+using FieldOps.Application.Facilities;
+using Microsoft.Data.SqlClient;
 using FieldOps.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,9 +53,33 @@ public sealed class FacilityRepository : IFacilityRepository
             cancellationToken);
     }
 
-    public Task<int> SaveChangesAsync(
+    public async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default)
     {
-        return _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            return await _context.SaveChangesAsync(
+                cancellationToken);
+        }
+        catch (DbUpdateException ex) when (
+            ex.InnerException is SqlException sqlException &&
+            (sqlException.Number == 2601 ||
+             sqlException.Number == 2627) &&
+            sqlException.Message.Contains(
+                "IX_Facilities_Code",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var entity = ex.Entries
+                .Select(entry => entry.Entity)
+                .OfType<Facility>()
+                .FirstOrDefault();
+
+            if (entity is null)
+            {
+                throw;
+            }
+
+            throw new DuplicateFacilityCodeException(entity.Code, ex);
+        }
     }
 }

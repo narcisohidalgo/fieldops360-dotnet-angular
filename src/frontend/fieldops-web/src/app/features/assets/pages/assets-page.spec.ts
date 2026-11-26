@@ -329,4 +329,142 @@ describe('AssetsPage', () => {
     expect(element.querySelector('.status-button')).toBeNull();
     expect(element.textContent).toContain('Modo consulta');
   });
+
+  it('keeps the creation panel open while saving and unlocks after an error', () => {
+    const fixture = loadPageForActionTests();
+    const element = fixture.nativeElement as HTMLElement;
+
+    const createDebug = fixture.debugElement.query(
+      By.css('.create-button')
+    );
+
+    const createButton = createDebug.nativeElement as HTMLButtonElement;
+
+    createButton.click();
+    fixture.detectChanges();
+
+    const panel = element.querySelector<HTMLElement>('.create-panel')!;
+
+    const fields = [
+      ['#asset-facility', facilityId],
+      ['#asset-code', 'AUD-006-ASSET'],
+      ['#asset-name', 'Audit asset']
+    ];
+
+    for (const [selector, value] of fields) {
+      const control = panel.querySelector<
+        HTMLInputElement | HTMLSelectElement
+      >(selector)!;
+
+      control.value = value;
+      control.dispatchEvent(new Event(
+        control.tagName === 'SELECT' ? 'change' : 'input',
+        { bubbles: true }
+      ));
+    }
+
+    panel.querySelector('form')!.dispatchEvent(
+      new Event('submit', {
+        bubbles: true,
+        cancelable: true
+      })
+    );
+
+    fixture.detectChanges();
+
+    const request = httpMock.expectOne('/api/assets');
+
+    expect(request.request.method).toBe('POST');
+    expect(createButton.disabled).toBe(true);
+
+    // Exercise the actual Angular handler, bypassing the
+    // native button's disabled state.
+    createDebug.triggerEventHandler('click', new MouseEvent('click'));
+    fixture.detectChanges();
+
+    expect(element.querySelector('.create-panel')).toBe(panel);
+    expect(request.cancelled).toBe(false);
+
+    request.flush(
+      { title: 'Save failed' },
+      { status: 500, statusText: 'Server Error' }
+    );
+
+    fixture.detectChanges();
+
+    expect(element.querySelector('.create-panel')).toBe(panel);
+    expect(createButton.disabled).toBe(false);
+
+    expect(
+      panel.querySelector<HTMLInputElement>('#asset-code')?.value
+    ).toBe('AUD-006-ASSET');
+
+    createButton.click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.create-panel')).toBeNull();
+  });
+
+  it('rejects edit cancellation while saving and allows it after an error', () => {
+    const fixture = loadPageForActionTests();
+    const element = fixture.nativeElement as HTMLElement;
+
+    element.querySelector<HTMLButtonElement>('.edit-button')!.click();
+    fixture.detectChanges();
+
+    const panel = element.querySelector<HTMLElement>('.edit-panel')!;
+
+    const name = panel.querySelector<HTMLInputElement>(
+      '#edit-asset-name'
+    )!;
+
+    name.value = 'Updated audit asset';
+    name.dispatchEvent(new Event('input', { bubbles: true }));
+
+    panel.querySelector('form')!.dispatchEvent(
+      new Event('submit', {
+        bubbles: true,
+        cancelable: true
+      })
+    );
+
+    fixture.detectChanges();
+
+    const request = httpMock.expectOne(`/api/assets/${assetId}`);
+
+    expect(request.request.method).toBe('PUT');
+
+    const cancel = panel.querySelector<HTMLButtonElement>(
+      '.cancel-button'
+    )!;
+
+    expect(cancel.disabled).toBe(true);
+
+    // Verify the parent guard even if a child emits cancellation.
+    const child = fixture.debugElement.query(
+      By.css('app-asset-edit-form')
+    ).componentInstance;
+
+    child.cancelled.emit();
+
+    fixture.detectChanges();
+
+    expect(element.querySelector('.edit-panel')).toBe(panel);
+    expect(request.cancelled).toBe(false);
+
+    request.flush(
+      { title: 'Save failed' },
+      { status: 500, statusText: 'Server Error' }
+    );
+
+    fixture.detectChanges();
+
+    expect(cancel.disabled).toBe(false);
+    expect(name.value).toBe('Updated audit asset');
+
+    cancel.click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.edit-panel')).toBeNull();
+  });
 });

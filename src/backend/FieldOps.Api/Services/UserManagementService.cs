@@ -6,7 +6,6 @@ using FieldOps.Application.Technicians;
 using FieldOps.Infrastructure.Identity;
 using FieldOps.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace FieldOps.Api.Services;
@@ -157,6 +156,13 @@ public sealed partial class UserManagementService : IUserManagementService
                 "La contrasena es obligatoria.");
         }
 
+        if (request.Password.Length > PasswordLimits.MaxLength)
+        {
+            throw new UserManagementException(
+                BadRequest,
+                "La contrasena supera la longitud maxima permitida.");
+        }
+
         if (!AllowedRoles.Contains(role))
         {
             throw new UserManagementException(
@@ -247,24 +253,7 @@ public sealed partial class UserManagementService : IUserManagementService
 
             return await ToDtoAsync(user);
         }
-        catch (DbUpdateException ex) when (
-            ex.GetBaseException() is SqlException sql &&
-            (
-                sql.Number == 2601 ||
-                sql.Number == 2627 ||
-                sql.Number == 1205
-            ))
-        {
-            throw new UserManagementException(
-                Conflict,
-                "La cuenta o el tecnico han sido modificados " +
-                "por otra operacion. Actualiza e intentalo de nuevo.");
-        }
-        catch (SqlException ex) when (
-            ex.Number == 2601 ||
-            ex.Number == 2627 ||
-            ex.Number == 1205
-        )
+        catch (Exception ex) when (IsSqlConflict(ex))
         {
             throw new UserManagementException(
                 Conflict,

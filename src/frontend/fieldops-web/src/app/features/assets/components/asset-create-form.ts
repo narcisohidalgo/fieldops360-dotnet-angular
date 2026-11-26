@@ -48,6 +48,7 @@ export class AssetCreateForm {
   );
 
   protected readonly isSaving = signal(false);
+  readonly saving = this.isSaving.asReadonly();
   protected readonly saveError = signal<string | null>(null);
 
   private readonly formBuilder = inject(FormBuilder);
@@ -99,6 +100,7 @@ export class AssetCreateForm {
     }
 
     this.isSaving.set(true);
+    this.form.disable({ emitEvent: false });
 
     this.assetService.create({
       facilityId: selectedFacility.id,
@@ -109,11 +111,13 @@ export class AssetCreateForm {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (asset) => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
           this.form.reset();
           this.created.emit(asset);
         },
         error: (error: unknown) => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
 
           if (error instanceof HttpErrorResponse) {

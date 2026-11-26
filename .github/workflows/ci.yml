@@ -40,7 +40,28 @@ jobs:
         run: dotnet build src/backend/FieldOps.slnx --configuration Release --no-restore
 
       - name: Run .NET unit tests
-        run: dotnet test src/backend/FieldOps.slnx --configuration Release --no-build --no-restore --verbosity minimal
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          dotnet test tests/FieldOps.Application.Tests/FieldOps.Application.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --verbosity minimal \
+            --logger "trx;LogFileName=unit.trx" \
+            --results-directory "$RUNNER_TEMP/fieldops-tests"
+
+      - name: Verify .NET unit test execution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          & ./.github/scripts/verify-trx.test.ps1
+
+          & ./.github/scripts/verify-trx.ps1 `
+            -ReportPath "$env:RUNNER_TEMP/fieldops-tests/unit.trx" `
+            -MinimumTests 263
 
   frontend:
     name: Frontend - Angular 22
@@ -67,8 +88,17 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Verify JSON report validator
+        run: node --test ../../../.github/scripts/verify-test-results.test.cjs
+
       - name: Run Angular unit tests
-        run: npm test -- --watch=false
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test -- --watch=false --reporters=default --reporters=json --output-file="$RUNNER_TEMP/fieldops-vitest.json"
+
+      - name: Verify Angular test report
+        run: node ../../../.github/scripts/verify-test-results.cjs vitest "$RUNNER_TEMP/fieldops-vitest.json"
 
       - name: Build Angular production
         run: npm run build
@@ -112,7 +142,12 @@ jobs:
 
       - name: Run isolated browser smoke test
         working-directory: src/frontend/fieldops-web
-        run: npm run e2e
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/fieldops-browser.json
+        run: npm run e2e -- --reporter=list,json
+
+      - name: Verify isolated browser test report
+        run: node .github/scripts/verify-test-results.cjs browser "$RUNNER_TEMP/fieldops-browser.json"
 
       - name: Start isolated SQL Server
         shell: bash
@@ -178,6 +213,7 @@ jobs:
           FIELDOPS_RUN_SQL_TESTS: "1"
           FIELDOPS_RUN_E2E: "1"
           FIELDOPS_E2E_ROOT: ${{ github.workspace }}
+          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/fieldops-real.json
         shell: bash
         run: |
           dotnet test tests/FieldOps.Integration.Tests/FieldOps.Integration.Tests.csproj \
@@ -189,51 +225,21 @@ jobs:
             --logger "trx;LogFileName=e2e.trx" \
             --results-directory "$RUNNER_TEMP/fieldops-tests"
 
+      - name: Verify real Playwright test report
+        run: node .github/scripts/verify-test-results.cjs real "$RUNNER_TEMP/fieldops-real.json"
+
       - name: Verify test execution without skips
-        shell: bash
+        shell: pwsh
         run: |
-          python3 - "$RUNNER_TEMP/fieldops-tests" <<'PY'
-          import sys
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
+          $ErrorActionPreference = "Stop"
 
-          directory = Path(sys.argv[1])
+          & ./.github/scripts/verify-trx.ps1 `
+            -ReportPath "$env:RUNNER_TEMP/fieldops-tests/integration.trx" `
+            -MinimumTests 43
 
-          suites = (
-              ("integration.trx", 35),
-              ("e2e.trx", 1),
-          )
-
-          for filename, minimum_tests in suites:
-              root = ET.parse(directory / filename).getroot()
-              counters = root.find(".//{*}Counters")
-
-              if counters is None:
-                  raise SystemExit(f"{filename}: missing test counters")
-
-              total = int(counters.get("total", "0"))
-              executed = int(counters.get("executed", "0"))
-              passed = int(counters.get("passed", "0"))
-              failed = int(counters.get("failed", "0"))
-              not_executed = int(counters.get("notExecuted", "0"))
-
-              print(
-                  f"{filename}: total={total}, executed={executed}, "
-                  f"passed={passed}, failed={failed}, "
-                  f"notExecuted={not_executed}"
-              )
-
-              if (
-                  total < minimum_tests
-                  or executed != total
-                  or passed != total
-                  or failed != 0
-                  or not_executed != 0
-              ):
-                  raise SystemExit(f"{filename}: test verification failed")
-
-          print("All required tests executed successfully.")
-          PY
+          & ./.github/scripts/verify-trx.ps1 `
+            -ReportPath "$env:RUNNER_TEMP/fieldops-tests/e2e.trx" `
+            -MinimumTests 1
 
       - name: Verify temporary database cleanup
         shell: bash
@@ -324,6 +330,16 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           & ./scripts/docker/Initialize-DatabaseRuntime.ps1
+
+      - name: Bootstrap isolated Docker administrator
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 -c 'import ast; from pathlib import Path; ast.parse(Path(".github/scripts/bootstrap-docker-admin.py").read_text(encoding="utf-8")); print("Python syntax verified.")'
+
+          python3 -u .github/scripts/bootstrap-docker-admin.py
 
       - name: Start production containers
         shell: bash
@@ -471,7 +487,13 @@ jobs:
 
       - name: Run Docker production browser tests
         working-directory: src/frontend/fieldops-web
-        run: npm run e2e:docker
+        env:
+          FIELDOPS_DOCKER_AUTH_REQUIRED: "1"
+          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/fieldops-docker.json
+        run: npm run e2e:docker -- --reporter=list,json
+
+      - name: Verify Docker browser test report
+        run: node .github/scripts/verify-test-results.cjs docker "$RUNNER_TEMP/fieldops-docker.json"
 
       - name: Verify database migrations
         shell: bash

@@ -3,7 +3,16 @@
 public sealed class DuplicateTechnicianCodeException : Exception
 {
     public DuplicateTechnicianCodeException(string code)
-        : base($"A technician with code '{code}' already exists.")
+        : this(code, null)
+    {
+    }
+
+    public DuplicateTechnicianCodeException(
+        string code,
+        Exception? innerException)
+        : base(
+            $"A technician with code '{code}' already exists.",
+            innerException)
     {
     }
 }

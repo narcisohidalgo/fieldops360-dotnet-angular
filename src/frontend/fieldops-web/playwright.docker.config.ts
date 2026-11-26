@@ -21,7 +21,10 @@ const certificatePin = createHash('sha256')
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: '**/*.docker.e2e.ts',
+  // The authenticated scenario requires an isolated Docker environment.
+  testMatch: process.env.FIELDOPS_DOCKER_AUTH_REQUIRED === '1'
+    ? ['**/*.docker.e2e.ts', '**/*.docker-auth.e2e.ts']
+    : '**/*.docker.e2e.ts',
   fullyParallel: false,
   workers: 1,
   retries: 0,

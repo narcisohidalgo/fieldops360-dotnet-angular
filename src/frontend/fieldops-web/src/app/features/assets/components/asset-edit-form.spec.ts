@@ -442,4 +442,84 @@ describe('AssetEditForm', () => {
 
     httpMock.expectNone('/api/assets');
   });
+
+  it.each([true, false])(
+    'locks all edit controls until the response (success=%s)',
+    succeeds => {
+      const { fixture, element } = setup();
+
+      fillField(element, 'name', 'Updated audit asset');
+      fillField(element, 'description', 'Updated audit description');
+
+      const controls = Array.from(element.querySelectorAll<
+        HTMLInputElement | HTMLTextAreaElement
+      >('form input, form textarea'));
+
+      expect(controls).toHaveLength(2);
+
+      const initialValues = controls.map(control => control.value);
+
+      const cancelButton = element.querySelector<HTMLButtonElement>(
+        '.cancel-button'
+      )!;
+
+      let cancelled = false;
+
+      fixture.componentInstance.cancelled.subscribe(() => {
+        cancelled = true;
+      });
+
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      submitForm(element);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(true);
+      expect(controls.every(control => control.disabled)).toBe(true);
+      expect(cancelButton.disabled).toBe(true);
+
+      cancelButton.click();
+
+      expect(cancelled).toBe(false);
+
+      submitForm(element);
+
+      const request = httpMock.expectOne(`/api/assets/${assetId}`);
+
+      expect(request.request.method).toBe('PUT');
+
+      expect(request.request.body).toEqual({
+        name: 'Updated audit asset',
+        description: 'Updated audit description'
+      });
+
+      if (succeeds) {
+        request.flush(null, {
+          status: 204,
+          statusText: 'No Content'
+        });
+      } else {
+        request.flush(
+          { title: 'Save failed' },
+          { status: 500, statusText: 'Server Error' }
+        );
+      }
+
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(false);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+      expect(cancelButton.disabled).toBe(false);
+
+      expect(controls.map(control => control.value))
+        .toEqual(initialValues);
+
+      if (!succeeds) {
+        expect(element.querySelector('[role="alert"]'))
+          .not.toBeNull();
+      }
+
+      httpMock.expectNone(`/api/assets/${assetId}`);
+    }
+  );
 });

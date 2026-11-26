@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using FieldOps.Api.Security;
 using FieldOps.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,6 +98,12 @@ internal static class FirstAdminBootstrap
         {
             throw new InvalidOperationException(
                 "La contrasena no puede estar vacia.");
+        }
+
+        if (password.Length > PasswordLimits.MaxLength)
+        {
+            throw new InvalidOperationException(
+                "La contrasena supera la longitud maxima permitida.");
         }
 
         // Crear solo los roles que no existan.

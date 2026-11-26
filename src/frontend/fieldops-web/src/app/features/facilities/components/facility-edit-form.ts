@@ -55,6 +55,7 @@ export class FacilityEditForm {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly isSaving = signal(false);
+  readonly saving = this.isSaving.asReadonly();
   protected readonly saveError = signal<string | null>(null);
 
   protected readonly form = this.formBuilder.nonNullable.group({
@@ -104,6 +105,7 @@ export class FacilityEditForm {
     const values = this.form.getRawValue();
 
     this.isSaving.set(true);
+    this.form.disable({ emitEvent: false });
 
     this.facilityService.update(this.facility().id, {
       name: values.name.trim(),
@@ -115,10 +117,12 @@ export class FacilityEditForm {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
           this.saved.emit();
         },
         error: (error: unknown) => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
 
           if (error instanceof HttpErrorResponse) {

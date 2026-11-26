@@ -384,4 +384,73 @@ describe('AssetCreateForm', () => {
 
     httpMock.expectNone('/api/assets');
   });
+
+  it.each([true, false])(
+    'locks all create controls until the response (success=%s)',
+    succeeds => {
+      const { fixture, element } = setup();
+
+      fillValidForm(element);
+
+      const controls = Array.from(element.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >('form input, form select, form textarea'));
+
+      expect(controls).toHaveLength(4);
+
+      const initialValues = controls.map(control => control.value);
+
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      submitForm(element);
+      fixture.detectChanges();
+
+      expect(controls.every(control => control.disabled)).toBe(true);
+      expect(fixture.componentInstance.saving()).toBe(true);
+
+      // A second submission must not create another request.
+      submitForm(element);
+
+      const request = httpMock.expectOne('/api/assets');
+
+      expect(request.request.method).toBe('POST');
+
+      expect(request.request.body).toEqual({
+        facilityId,
+        code: 'EQ-002',
+        name: 'Sensor de temperatura',
+        description: 'Sensor ambiental'
+      });
+
+      if (succeeds) {
+        request.flush(createdAsset, {
+          status: 201,
+          statusText: 'Created'
+        });
+      } else {
+        request.flush(
+          { title: 'Save failed' },
+          { status: 500, statusText: 'Server Error' }
+        );
+      }
+
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(false);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      if (succeeds) {
+        expect(controls.map(control => control.value))
+          .toEqual(['', '', '', '']);
+      } else {
+        expect(controls.map(control => control.value))
+          .toEqual(initialValues);
+
+        expect(element.querySelector('[role="alert"]'))
+          .not.toBeNull();
+      }
+
+      httpMock.expectNone('/api/assets');
+    }
+  );
 });

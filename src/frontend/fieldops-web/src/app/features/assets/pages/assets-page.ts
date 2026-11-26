@@ -4,7 +4,8 @@ import {
   DestroyRef,
   inject,
   OnInit,
-  signal
+  signal,
+  viewChild
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -66,7 +67,19 @@ export class AssetsPage implements OnInit {
     this.loadAssets();
   }
 
+  private readonly createForm = viewChild(AssetCreateForm);
+  private readonly editForm = viewChild(AssetEditForm);
+
+  protected readonly isFormSaving = computed(() =>
+    this.createForm()?.saving() === true ||
+    this.editForm()?.saving() === true
+  );
+
   protected toggleCreateForm(): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
     if (!this.canManage()) {
       return;
     }
@@ -109,6 +122,10 @@ export class AssetsPage implements OnInit {
   }
 
   protected cancelEdit(): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
     this.selectedAsset.set(null);
   }
 

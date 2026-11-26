@@ -1,5 +1,11 @@
 # GitHub Actions Continuous Integration — Phase 14 Groundwork
 
+> **Historical reference:** Commands, job definitions, security
+> scope and limitations below describe the original Phase 12
+> workflow. They must not be interpreted as the current CI/CD
+> configuration. The Phase 15 workflow adds mandatory structured
+> test report validation and real Docker authentication.
+
 > **Phase 14 update:** This document records the historical Phase 12 CI baseline. The workflow has since been extended with isolated SQL Server integration tests, Playwright, Docker deployment validation and GHCR delivery. See [Phase 14 Docker and CI/CD](../phase14-docker-cicd.md) for the current configuration and verification status.
 
 This CI workflow was implemented in advance of Phase 14.
@@ -61,7 +67,7 @@ SQL Server-backed tests require FIELDOPS_RUN_SQL_TESTS=1.
 Real browser orchestration requires FIELDOPS_RUN_E2E=1
 and the additional local E2E prerequisites.
 
-These opt-in scenarios are skipped by the current CI
+These opt-in scenarios were skipped by the original CI
 configuration. The workflow does not provision SQL Server
 or install Playwright browsers.
 
@@ -152,11 +158,11 @@ npm.cmd test -- --watch=false
 npm.cmd run build
 ```
 
-## Current scope and limitations
+## Historical Phase 12 scope and limitations
 
 - CI covers builds, unit tests and database-independent API smoke tests.
 - Database-backed integration tests are implemented and locally validated, but are skipped by default in CI.
-- Playwright end-to-end scenarios are implemented and locally validated, but are not executed by the current workflow.
+- Playwright end-to-end scenarios are implemented and locally validated, but were not executed by the original workflow.
 - No code coverage threshold is enforced.
 - No production deployment is configured.
 - Docker and automated delivery are future work.

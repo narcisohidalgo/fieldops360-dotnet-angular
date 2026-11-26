@@ -71,6 +71,7 @@ export class UserCreateForm implements OnInit {
   });
 
   protected readonly isSaving = signal(false);
+  readonly saving = this.isSaving.asReadonly();
   protected readonly saveError = signal<string | null>(null);
 
   private readonly fb = inject(FormBuilder);

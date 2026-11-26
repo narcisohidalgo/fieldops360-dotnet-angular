@@ -415,4 +415,104 @@ describe('TechnicianEditForm', () => {
 
     httpMock.expectNone(apiUrl);
   });
+
+  it.each([true, false])(
+    'locks all edit controls until the response (success=%s)',
+    succeeds => {
+      const { fixture, element } = setup();
+
+      fillField(element, 'name', 'Updated audit technician');
+      fillField(element, 'email', 'audit@example.invalid');
+      fillField(element, 'phone', '');
+      fillField(element, 'specialty', '');
+
+      const controls = Array.from(
+        element.querySelectorAll<HTMLInputElement>('form input')
+      );
+
+      expect(controls).toHaveLength(4);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      const initialValues = controls.map(control => control.value);
+
+      const cancelButton = element.querySelector<HTMLButtonElement>(
+        '.cancel-button'
+      )!;
+
+      let cancelled = false;
+      let saved = false;
+
+      fixture.componentInstance.cancelled.subscribe(() => {
+        cancelled = true;
+      });
+
+      fixture.componentInstance.saved.subscribe(() => {
+        saved = true;
+      });
+
+      submitForm(element);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(true);
+      expect(controls.every(control => control.disabled)).toBe(true);
+      expect(cancelButton.disabled).toBe(true);
+
+      cancelButton.click();
+      expect(cancelled).toBe(false);
+
+      submitForm(element);
+
+      const request = httpMock.expectOne(apiUrl);
+
+      expect(request.request.method).toBe('PUT');
+
+      expect(request.request.body).toEqual({
+        name: 'Updated audit technician',
+        email: 'audit@example.invalid',
+        phone: null,
+        specialty: null
+      });
+
+      expect(request.request.body.code).toBeUndefined();
+
+      if (succeeds) {
+        request.flush(null, {
+          status: 204,
+          statusText: 'No Content'
+        });
+      } else {
+        request.flush(
+          { title: 'Save failed' },
+          { status: 500, statusText: 'Server Error' }
+        );
+      }
+
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(false);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+      expect(cancelButton.disabled).toBe(false);
+      expect(saved).toBe(succeeds);
+
+      expect(controls.map(control => control.value))
+        .toEqual(initialValues);
+
+      if (!succeeds) {
+        expect(element.querySelector('.save-error'))
+          .not.toBeNull();
+
+        fillField(element, 'email', 'invalid-email');
+        submitForm(element);
+        fixture.detectChanges();
+
+        expect(element.querySelector('.field-error'))
+          .not.toBeNull();
+      }
+
+      cancelButton.click();
+      expect(cancelled).toBe(true);
+
+      httpMock.expectNone(apiUrl);
+    }
+  );
 });

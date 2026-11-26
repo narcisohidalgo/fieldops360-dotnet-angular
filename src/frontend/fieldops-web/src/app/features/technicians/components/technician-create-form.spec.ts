@@ -337,4 +337,88 @@ describe('TechnicianCreateForm', () => {
     expect(button?.disabled).toBe(false);
     httpMock.expectNone('/api/technicians');
   });
+
+  it.each([true, false])(
+    'locks all create controls until the response (success=%s)',
+    succeeds => {
+      const { fixture, element } = setup();
+
+      fillValidForm(element);
+
+      const controls = Array.from(
+        element.querySelectorAll<HTMLInputElement>('form input')
+      );
+
+      expect(controls).toHaveLength(5);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      const initialValues = controls.map(control => control.value);
+
+      let created: Technician | undefined;
+
+      fixture.componentInstance.created.subscribe(value => {
+        created = value;
+      });
+
+      submitForm(element);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(true);
+      expect(controls.every(control => control.disabled)).toBe(true);
+
+      submitForm(element);
+
+      const request = httpMock.expectOne('/api/technicians');
+
+      expect(request.request.method).toBe('POST');
+      expect(request.request.body).toEqual({
+        code: 'TEC-001',
+        name: 'Ana Lopez',
+        email: 'ana@example.com',
+        phone: '600123456',
+        specialty: 'Electricidad'
+      });
+
+      if (succeeds) {
+        request.flush(createdTechnician, {
+          status: 201,
+          statusText: 'Created'
+        });
+      } else {
+        request.flush(
+          { title: 'Duplicate technician code' },
+          { status: 409, statusText: 'Conflict' }
+        );
+      }
+
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.saving()).toBe(false);
+      expect(controls.every(control => !control.disabled)).toBe(true);
+
+      if (succeeds) {
+        expect(created).toEqual(createdTechnician);
+
+        expect(controls.map(control => control.value))
+          .toEqual(['', '', '', '', '']);
+      } else {
+        expect(created).toBeUndefined();
+
+        expect(controls.map(control => control.value))
+          .toEqual(initialValues);
+
+        expect(element.querySelector('.save-error')?.textContent)
+          .toContain('Ya existe un');
+
+        fillField(element, 'email', 'invalid-email');
+        submitForm(element);
+        fixture.detectChanges();
+
+        expect(element.querySelector('.field-error'))
+          .not.toBeNull();
+      }
+
+      httpMock.expectNone('/api/technicians');
+    }
+  );
 });

@@ -57,6 +57,7 @@ export class LoginPage {
           const safePath = requested?.split(/[?#]/, 1)[0];
 
           const protectedRoutes = new Set([
+            '/dashboard',
             '/facilities',
             '/assets',
             '/incidents',

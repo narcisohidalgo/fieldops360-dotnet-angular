@@ -115,6 +115,7 @@ export class TechnicianEditForm {
     const values = this.form.getRawValue();
 
     this.isSaving.set(true);
+    this.form.disable({ emitEvent: false });
 
     this.technicianService.update(this.technician().id, {
       name: values.name.trim(),
@@ -125,10 +126,12 @@ export class TechnicianEditForm {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
           this.saved.emit();
         },
         error: (error: unknown) => {
+          this.form.enable({ emitEvent: false });
           this.isSaving.set(false);
 
           if (error instanceof HttpErrorResponse) {

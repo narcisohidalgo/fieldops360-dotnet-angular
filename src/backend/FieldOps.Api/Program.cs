@@ -64,6 +64,7 @@ builder.Services.AddOpenApi();
 
 // SignalR: conexiones autenticadas para eventos operativos.
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<OperationsConnectionRegistry>();
 builder.Services.AddSingleton<
     IOperationsEventPublisher,
     OperationsEventPublisher>();

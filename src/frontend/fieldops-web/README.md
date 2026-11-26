@@ -1,107 +1,166 @@
 # FieldOps 360 - Angular Frontend
 
-Angular 22 frontend for FieldOps 360, an operations and maintenance management portfolio project.
+Angular 22 frontend for FieldOps 360, an operations and maintenance
+management portfolio application backed by ASP.NET Core 10,
+Entity Framework Core and SQL Server.
 
-The application communicates with an ASP.NET Core 10 REST API backed by SQL Server and Entity Framework Core.
-
-See the [main project README](../../../README.md) for architecture, backend configuration and database migrations.
+See the [main project README](../../../README.md) for architecture,
+backend configuration, database migrations and deployment instructions.
 
 ## Technology stack
 
-- Angular 22 and TypeScript
-- Standalone components and lazy-loaded routes
-- Angular signals and computed state
-- Reactive Forms and validation
-- HttpClient and RxJS
-- SCSS
-- Vitest unit and component tests
+- Angular 22 and TypeScript.
+- Standalone components and lazy-loaded routes.
+- Angular signals and computed state.
+- Reactive forms and template-driven login.
+- HttpClient and RxJS.
+- ASP.NET Core Identity cookie authentication and CSRF protection.
+- SignalR real-time notifications.
+- Leaflet and OpenStreetMap.
+- SCSS.
+- Vitest, Angular TestBed and Playwright.
 
-## Implemented modules
+## Application routes
 
-| Route | Module | Features |
-| --- | --- | --- |
-| / | Home | Application landing page |
-| /facilities | Facilities | Create, edit, list and activate/deactivate facilities |
-| /assets | Assets | Manage equipment associated with facilities |
-| /incidents | Incidents | Create, edit, filter and change incident status |
+| Route | Module |
+| --- | --- |
+| `/` | Home |
+| `/login` | Authentication |
+| `/access-denied` | Access denied |
+| `/dashboard` | Operational KPIs and statistics |
+| `/facilities` | Facility management and geographic visualization |
+| `/assets` | Industrial asset management |
+| `/incidents` | Incident management and lifecycle |
+| `/technicians` | Technician management |
+| `/work-orders` | Work order planning and assignment |
+| `/my-work-orders` | Assigned technician work orders |
+| `/users` | Identity user and role administration |
 
-## Incident management
+The application interface is in Spanish. Navigation and available
+actions depend on the authenticated user's role.
 
-Incidents belong to a facility and can optionally reference an asset from the same facility.
+## Authentication and security
 
-Supported priorities:
+- Cookie-based authentication with ASP.NET Core Identity.
+- Session restoration through `GET /api/auth/me`.
+- CSRF tokens for state-changing API requests.
+- Route guards and role-aware navigation.
+- Centralized handling of expired operational sessions.
+- Validated return URLs after authentication.
+- Protection against duplicate form submissions.
+- No authentication credentials stored in browser storage.
 
-- Low
-- Medium
-- High
-- Critical
+The backend remains the authorization boundary.
+Frontend guards and hidden controls do not replace server-side
+authorization or resource ownership checks.
 
-Supported workflow:
+## Real-time operations and GIS
 
-    Open -> InProgress -> Resolved -> Closed
+SignalR provides generic operational change notifications.
+Incident lists, work order lists and dashboard indicators
+refresh through authorized REST requests.
 
-Resolved and closed incidents can be reopened.
+Leaflet displays facilities with valid stored coordinates
+using OpenStreetMap tiles.
 
-The UI provides validated forms, filters, confirmation panels, loading states and HTTP error handling.
-
-The API can return HTTP 409 for invalid state transitions or concurrent modifications.
+External map tiles require network connectivity.
 
 ## Local development
 
-### Requirements
+Requirements:
 
-- Node.js and npm compatible with Angular 22
-- ASP.NET Core 10 backend
-- SQL Server with the EF Core migrations applied
+- Node.js 24 and npm.
+- .NET 10 SDK.
+- SQL Server with the EF Core migrations applied.
 
-Configure and start the backend using the instructions in the main project README.
+Configure and start the backend as described in the main README.
 
-From this frontend directory, install dependencies:
+From this frontend directory:
 
-    npm ci
+    npm.cmd ci
+    npm.cmd start
 
-Start the Angular development server:
+Open http://localhost:4200.
 
-    npm start
+The development proxy forwards API and SignalR requests
+to http://127.0.0.1:5080, including WebSocket upgrades.
 
-Open http://localhost:4200
+Alternatively, the production frontend can be served by
+Nginx through the local Docker environment at
+https://localhost:8443.
 
-The development proxy defined in src/proxy.conf.json forwards API requests to http://127.0.0.1:5080.
+## Testing and production build
 
-## Tests
+Run Angular unit and component tests:
 
-Run all Angular tests:
+    npm.cmd test -- --watch=false
 
-    npm test -- --watch=false
+Collect coverage:
+
+    npm.cmd run test:coverage
 
 Build the production application:
 
-    npm run build
+    npm.cmd run build
 
-At the end of Phase 7, the frontend passed 175 Vitest tests across 16 test files.
+Install Chromium for Playwright:
 
-The production build was also verified successfully.
+    npx.cmd playwright install chromium
 
-These results describe the local Phase 7 baseline, not continuous integration.
+Run the isolated browser smoke test:
+
+    npm.cmd run e2e
+
+The real browser suite is executed through the .NET integration
+test coordinator using isolated SQL Server data.
+
+The Docker browser suite targets the running HTTPS environment:
+
+    npm.cmd run e2e:docker
+
+The additional real authentication scenario is enabled in CI
+using an isolated administrator account.
+
+See the [testing documentation](../../../docs/phase13-testing-quality.md)
+and [Docker and CI/CD guide](../../../docs/phase14-docker-cicd.md)
+for prerequisites and execution details.
+
+## Phase 15 local audit results
+
+| Metric | Result |
+| --- | ---: |
+| Vitest tests passed | 559 |
+| Test files | 43 |
+| Statement coverage | 92.57% |
+| Branch coverage | 88.51% |
+| Function coverage | 87.78% |
+| Line coverage | 92.27% |
+| Initial production bundle (raw) | 383.35 kB |
+
+All 559 Angular tests passed without failures or skipped tests.
+The production build completed without warnings.
+
+The isolated browser smoke test and all four native real
+browser scenarios also passed.
+
+The updated Docker browser suite and consolidated CI workflow
+remain subject to final CI execution.
 
 ## Project structure
 
-The frontend groups functionality by feature under src/app/features:
+- `src/app/core/`: authentication, guards, interceptors and shared services.
+- `src/app/features/`: feature-specific pages, components, models and services.
+- `src/app/operational-notifications/`: notification panel.
+- `e2e/`: Playwright browser scenarios.
+- `nginx.conf`: production reverse proxy and SPA configuration.
 
-- home
-- facilities
-- assets
-- incidents
+## Limitations
 
-Each feature contains its corresponding components, models, pages, services and tests as needed.
+- Browser-side version preconditions for stale edits are not implemented.
+- Notification history is stored in browser memory only.
+- Automated browser verification currently targets Chromium.
+- Public production hosting and additional security hardening
+  remain outside the current scope.
 
-## Current limitations
-
-- Authentication and authorization are not yet implemented.
-- Browser-side version preconditions for stale edits remain future work.
-- Automated browser end-to-end tests are planned.
-- Production deployment and security hardening remain future work.
-
-This frontend is intended for local development and portfolio demonstration.
-
-See the [main README](../../../README.md) for the complete roadmap and security notes.
+See the [main README](../../../README.md) for the complete
+application documentation.

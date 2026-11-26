@@ -1,5 +1,15 @@
 # Phase 14 - Docker Deployment and CI/CD
 
+> **Phase 15 audit update:** Published-image installation now
+> validates the local Git revision and deployment files before
+> downloading images. CI includes an isolated Administrator
+> bootstrap, real Docker HTTPS authentication and structured
+> test report verification. Final execution of the updated
+> Docker suite and CI workflow remains pending.
+>
+> The original Phase 14 deployment and delivery results
+> are preserved as historical evidence.
+
 ## 1. Objectives and status
 
 Phase 14 packages FieldOps 360 into a reproducible local
@@ -300,7 +310,7 @@ identified local certificate public key. Strict certificate
 validation is performed separately by the HTTPS startup
 and CI smoke checks.
 
-The suite contains two scenarios:
+The default local suite contains two scenarios:
 
 - Anonymous protected-route navigation redirects to login.
 - The production Leaflet bundle initializes, displays a
@@ -319,8 +329,17 @@ npm.cmd run e2e:docker
 Frontend dependencies and Playwright Chromium must have
 been installed beforehand.
 
-The two scenarios passed locally. The CI configuration
-also runs them before Docker resource cleanup.
+The two scenarios passed during the Phase 14 local validation.
+
+The updated CI configuration enables an additional scenario
+with FIELDOPS_DOCKER_AUTH_REQUIRED=1.
+
+CI creates a temporary Administrator in an isolated Docker
+database and tests real HTTPS login, cookie security, CSRF
+rejection, protected API access, session restoration and logout.
+
+All three scenarios must pass before CI can publish images.
+The updated three-scenario execution remains pending final CI.
 
 ## 10. CI/CD pipeline
 
@@ -346,8 +365,13 @@ flowchart TD
 - Build the Angular production application.
 - Start an isolated SQL Server container.
 - Execute SQL integration and real Playwright tests.
-- Verify minimum test counts and reject skipped tests
-  in the mandatory integration suites.
+- Validate TRX reports for at least 263 unit tests,
+  43 integration tests and the native E2E coordinator.
+- Validate JSON reports for at least 559 Angular tests,
+  one mocked browser test, four real browser scenarios
+  and three Docker browser scenarios.
+- Reject failed, skipped, incomplete and flaky mandatory tests.
+- Execute regression tests for the TRX and JSON validators.
 - Build the three Docker application images.
 - Apply migrations in the isolated Docker environment.
 - Provision the restricted runtime SQL account.
@@ -401,6 +425,13 @@ matching source revision.
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File ./scripts/docker/Start-LocalEnvironment.ps1 -PublishedCommit "<FULL_COMMIT_SHA>"
 ```
+
+The installer requires Git when PublishedCommit is supplied.
+The checkout HEAD must match the requested full commit SHA.
+Required deployment files must be tracked and clean.
+Unexpected alternative Compose and override files are rejected.
+
+The normal local-source installation remains unchanged.
 
 The installer downloads the API, frontend and migration
 images before initializing the environment.

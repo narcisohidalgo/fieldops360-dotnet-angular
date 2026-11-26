@@ -165,11 +165,527 @@ public sealed class SignalRIntegrationTests
         Assert.Equal(1, await verification.WorkOrders.CountAsync());
     }
 
+    [SqlServerFact]
+    public async Task DeactivatedSupervisor_StopsReceivingOperationalEvents()
+    {
+        await using var database =
+            await SqlServerTestDatabase.CreateAsync();
+
+        await using var factory =
+            new SqlServerApiFactory(database);
+
+        await factory.InitializeDatabaseAsync();
+
+        var admin = await factory.CreateUserAsync(
+            FieldOpsRoles.Administrator);
+
+        var supervisor = await factory.CreateUserAsync(
+            FieldOpsRoles.Supervisor);
+
+        using var adminClient = factory.CreateSessionClient();
+        using var supervisorClient = factory.CreateSessionClient();
+
+        await using var adminHub = await CreateConnectionAsync(
+            factory,
+            adminClient,
+            admin.Email,
+            admin.Password,
+            useWebSockets: true);
+
+        await using var supervisorHub = await CreateConnectionAsync(
+            factory,
+            supervisorClient,
+            supervisor.Email,
+            supervisor.Password,
+            useWebSockets: true);
+
+        var supervisorAccount = await supervisorClient
+            .GetFromJsonAsync<FieldOps.Api.Controllers.AuthUserResponse>(
+                "/api/auth/me");
+
+        Assert.NotNull(supervisorAccount);
+
+        var adminEvents = new ConcurrentQueue<string>();
+        var supervisorEvents = new ConcurrentQueue<string>();
+
+        Subscribe(adminHub, adminEvents);
+        Subscribe(supervisorHub, supervisorEvents);
+
+        using var timeout =
+            new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        await StartAndVerifyAsync(adminHub, timeout.Token);
+        await StartAndVerifyAsync(supervisorHub, timeout.Token);
+
+        var publisher = factory.Services
+            .GetRequiredService<IOperationsEventPublisher>();
+
+        var expected = new[]
+        {
+            OperationsEventPublisher.IncidentsChangedEvent,
+            OperationsEventPublisher.WorkOrdersChangedEvent
+        };
+
+        // Both connections must receive events before revocation.
+        await publisher.IncidentsChangedAsync();
+        await publisher.WorkOrdersChangedAsync();
+
+        await SynchronizeAsync(
+            factory,
+            timeout.Token,
+            adminHub,
+            supervisorHub);
+
+        Assert.Equal(expected, adminEvents.ToArray());
+        Assert.Equal(expected, supervisorEvents.ToArray());
+
+        adminEvents.Clear();
+        supervisorEvents.Clear();
+
+        // Revoke the supervisor account through the real REST API.
+        using var deactivated = await adminClient.PatchAsync(
+            $"/api/users/{supervisorAccount.Id}/deactivate",
+            null,
+            timeout.Token);
+
+        Assert.Equal(HttpStatusCode.OK, deactivated.StatusCode);
+
+        // Confirm the previous HTTP session is no longer valid.
+        using var rejectedSession = await supervisorClient.GetAsync(
+            "/api/auth/me", timeout.Token);
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            rejectedSession.StatusCode);
+
+        // Do not voluntarily disconnect the revoked WebSocket.
+        // Publication must respect server-side authorization.
+        await publisher.IncidentsChangedAsync();
+        await publisher.WorkOrdersChangedAsync();
+
+        // Confirm that both connected clients processed earlier messages.
+        // This probe is test-only and contains no operational information.
+        await SynchronizeAsync(
+            factory,
+            timeout.Token,
+            adminHub,
+            supervisorHub);
+
+        // The administrator must continue receiving notifications.
+        Assert.Equal(expected, adminEvents.ToArray());
+
+        // The revoked supervisor must receive no operational events.
+        Assert.True(
+            supervisorEvents.IsEmpty,
+            "AUD-009: revoked supervisor received operational events.");
+    }
+
+
+    [SqlServerFact]
+    public Task DemotedSupervisor_LosesOperationalEventsAcrossConnections()
+    {
+        return VerifySessionRevocationAsync(
+            RevocationScenario.RoleChange);
+    }
+
+    [SqlServerFact]
+    public Task PasswordReset_RevokesOldConnectionsButAllowsNewSession()
+    {
+        return VerifySessionRevocationAsync(
+            RevocationScenario.PasswordReset);
+    }
+
+    [SqlServerFact]
+    public Task ReactivatedSupervisor_RequiresFreshSessionForOperationalEvents()
+    {
+        return VerifySessionRevocationAsync(
+            RevocationScenario.DeactivateAndReactivate);
+    }
+
+    private enum RevocationScenario
+    {
+        RoleChange,
+        PasswordReset,
+        DeactivateAndReactivate
+    }
+
+    private static async Task VerifySessionRevocationAsync(
+        RevocationScenario scenario)
+    {
+        await using var database =
+            await SqlServerTestDatabase.CreateAsync();
+
+        await using var factory =
+            new SqlServerApiFactory(database);
+
+        await factory.InitializeDatabaseAsync();
+
+        var admin = await factory.CreateUserAsync(
+            FieldOpsRoles.Administrator);
+
+        var supervisor = await factory.CreateUserAsync(
+            FieldOpsRoles.Supervisor);
+
+        using var adminClient = factory.CreateSessionClient();
+
+        using var firstOldClient = factory.CreateSessionClient();
+
+        using var secondOldClient = factory.CreateSessionClient();
+
+        await using var adminHub = await CreateConnectionAsync(
+            factory,
+            adminClient,
+            admin.Email,
+            admin.Password,
+            useWebSockets: true);
+
+        await using var firstOldHub = await CreateConnectionAsync(
+            factory,
+            firstOldClient,
+            supervisor.Email,
+            supervisor.Password,
+            useWebSockets: true);
+
+        await using var secondOldHub = await CreateConnectionAsync(
+            factory,
+            secondOldClient,
+            supervisor.Email,
+            supervisor.Password,
+            useWebSockets: true);
+
+        var account = await firstOldClient
+            .GetFromJsonAsync<FieldOps.Api.Controllers.AuthUserResponse>(
+                "/api/auth/me");
+
+        Assert.NotNull(account);
+
+        var secondAccount = await secondOldClient
+            .GetFromJsonAsync<FieldOps.Api.Controllers.AuthUserResponse>(
+                "/api/auth/me");
+
+        Assert.NotNull(secondAccount);
+        Assert.Equal(account.Id, secondAccount.Id);
+
+        var adminEvents = new ConcurrentQueue<string>();
+        var firstOldEvents = new ConcurrentQueue<string>();
+        var secondOldEvents = new ConcurrentQueue<string>();
+
+        Subscribe(adminHub, adminEvents);
+        Subscribe(firstOldHub, firstOldEvents);
+        Subscribe(secondOldHub, secondOldEvents);
+
+        using var timeout =
+            new CancellationTokenSource(TimeSpan.FromSeconds(45));
+
+        await StartAndVerifyAsync(adminHub, timeout.Token);
+        await StartAndVerifyAsync(firstOldHub, timeout.Token);
+        await StartAndVerifyAsync(secondOldHub, timeout.Token);
+
+        var publisher = factory.Services
+            .GetRequiredService<IOperationsEventPublisher>();
+
+        // All three connections are authorized initially.
+        await AssertOperationalDeliveryAsync(
+            factory,
+            publisher,
+            timeout.Token,
+            (adminHub, adminEvents, true),
+            (firstOldHub, firstOldEvents, true),
+            (secondOldHub, secondOldEvents, true));
+
+        var userUrl = $"/api/users/{account.Id}";
+
+        var currentPassword = supervisor.Password;
+
+        switch (scenario)
+        {
+            case RevocationScenario.RoleChange:
+            {
+                var technician = new Technician(
+                    "TEC-AUD009",
+                    "Audit Technician",
+                    "audit-technician@example.invalid");
+
+                await using (var db = database.CreateContext())
+                {
+                    db.Technicians.Add(technician);
+                    await db.SaveChangesAsync(timeout.Token);
+                }
+
+                // Ensure the target role exists without linking
+                // the technician to another account.
+                await using (var scope =
+                    factory.Services.CreateAsyncScope())
+                {
+                    var roles = scope.ServiceProvider
+                        .GetRequiredService<
+                            Microsoft.AspNetCore.Identity.RoleManager<
+                                Microsoft.AspNetCore.Identity.IdentityRole<Guid>>>();
+
+                    if (!await roles.RoleExistsAsync(
+                        FieldOpsRoles.Technician))
+                    {
+                        var created = await roles.CreateAsync(
+                            new Microsoft.AspNetCore.Identity.IdentityRole<Guid>(
+                                FieldOpsRoles.Technician));
+
+                        Assert.True(created.Succeeded);
+                    }
+                }
+
+                using var updated = await adminClient.PutAsJsonAsync(
+                    userUrl,
+                    new FieldOps.Api.Controllers.UpdateManagedUserRequest
+                    {
+                        DisplayName = "Demoted Supervisor",
+                        Role = FieldOpsRoles.Technician,
+                        TechnicianId = technician.Id
+                    },
+                    timeout.Token);
+
+                Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+
+                var updatedAccount = await updated.Content
+                    .ReadFromJsonAsync<
+                        FieldOps.Api.Controllers.ManagedUserDto>(
+                            cancellationToken: timeout.Token);
+
+                Assert.NotNull(updatedAccount);
+                Assert.True(updatedAccount.IsActive);
+
+                Assert.Equal(
+                    FieldOpsRoles.Technician,
+                    Assert.Single(updatedAccount.Roles));
+
+                Assert.Equal(
+                    technician.Id,
+                    updatedAccount.TechnicianId);
+
+                break;
+            }
+
+            case RevocationScenario.PasswordReset:
+            {
+                currentPassword = $"Aa1!{Guid.NewGuid():N}";
+
+                using var reset = await adminClient.PostAsJsonAsync(
+                    $"{userUrl}/reset-password",
+                    new FieldOps.Api.Controllers.ResetManagedUserPasswordRequest
+                    {
+                        NewPassword = currentPassword
+                    },
+                    timeout.Token);
+
+                Assert.Equal(
+                    HttpStatusCode.NoContent,
+                    reset.StatusCode);
+
+                break;
+            }
+
+            case RevocationScenario.DeactivateAndReactivate:
+            {
+                using var deactivated = await adminClient.PatchAsync(
+                    $"{userUrl}/deactivate",
+                    null,
+                    timeout.Token);
+
+                Assert.Equal(
+                    HttpStatusCode.OK,
+                    deactivated.StatusCode);
+
+                var inactiveAccount = await deactivated.Content
+                    .ReadFromJsonAsync<
+                        FieldOps.Api.Controllers.ManagedUserDto>(
+                            cancellationToken: timeout.Token);
+
+                Assert.NotNull(inactiveAccount);
+                Assert.False(inactiveAccount.IsActive);
+
+                break;
+            }
+
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(scenario));
+        }
+
+        // Both original HTTP sessions must be invalidated.
+        using var firstRejected = await firstOldClient.GetAsync(
+            "/api/auth/me", timeout.Token);
+
+        using var secondRejected = await secondOldClient.GetAsync(
+            "/api/auth/me", timeout.Token);
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            firstRejected.StatusCode);
+
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            secondRejected.StatusCode);
+
+        // Both WebSockets remain open but must receive
+        // no further restricted operational events.
+        await AssertOperationalDeliveryAsync(
+            factory,
+            publisher,
+            timeout.Token,
+            (adminHub, adminEvents, true),
+            (firstOldHub, firstOldEvents, false),
+            (secondOldHub, secondOldEvents, false));
+
+        if (scenario == RevocationScenario.DeactivateAndReactivate)
+        {
+            using var activated = await adminClient.PatchAsync(
+                $"{userUrl}/activate",
+                null,
+                timeout.Token);
+
+            Assert.Equal(
+                HttpStatusCode.OK,
+                activated.StatusCode);
+
+            var activeAccount = await activated.Content
+                .ReadFromJsonAsync<
+                    FieldOps.Api.Controllers.ManagedUserDto>(
+                        cancellationToken: timeout.Token);
+
+            Assert.NotNull(activeAccount);
+            Assert.True(activeAccount.IsActive);
+
+            // Reactivation alone must never restore old connections.
+            await AssertOperationalDeliveryAsync(
+                factory,
+                publisher,
+                timeout.Token,
+                (adminHub, adminEvents, true),
+                (firstOldHub, firstOldEvents, false),
+                (secondOldHub, secondOldEvents, false));
+        }
+
+        if (scenario == RevocationScenario.PasswordReset)
+        {
+            using var rejectedClient =
+                factory.CreateSessionClient();
+
+            await SqlServerApiFactory.RefreshCsrfAsync(
+                rejectedClient);
+
+            using var oldPasswordLogin =
+                await rejectedClient.PostAsJsonAsync(
+                    "/api/auth/login",
+                    new
+                    {
+                        email = supervisor.Email,
+                        password = supervisor.Password
+                    },
+                    timeout.Token);
+
+            Assert.Equal(
+                HttpStatusCode.Unauthorized,
+                oldPasswordLogin.StatusCode);
+        }
+
+        // Authenticate again and establish a new independent connection.
+        using var freshClient = factory.CreateSessionClient();
+
+        await using var freshHub = await CreateConnectionAsync(
+            factory,
+            freshClient,
+            supervisor.Email,
+            currentPassword,
+            useWebSockets: true);
+
+        var freshAccount = await freshClient
+            .GetFromJsonAsync<FieldOps.Api.Controllers.AuthUserResponse>(
+                "/api/auth/me",
+                timeout.Token);
+
+        Assert.NotNull(freshAccount);
+        Assert.Equal(account.Id, freshAccount.Id);
+
+        var expectedRole =
+            scenario == RevocationScenario.RoleChange
+                ? FieldOpsRoles.Technician
+                : FieldOpsRoles.Supervisor;
+
+        Assert.Equal(
+            expectedRole,
+            Assert.Single(freshAccount.Roles));
+
+        var freshEvents = new ConcurrentQueue<string>();
+
+        Subscribe(freshHub, freshEvents);
+
+        await StartAndVerifyAsync(freshHub, timeout.Token);
+
+        // New manager sessions receive notifications.
+        // New technician sessions and all old sessions do not.
+        await AssertOperationalDeliveryAsync(
+            factory,
+            publisher,
+            timeout.Token,
+            (adminHub, adminEvents, true),
+            (firstOldHub, firstOldEvents, false),
+            (secondOldHub, secondOldEvents, false),
+            (freshHub, freshEvents,
+                scenario != RevocationScenario.RoleChange));
+    }
+
+    private static async Task AssertOperationalDeliveryAsync(
+        SqlServerApiFactory factory,
+        IOperationsEventPublisher publisher,
+        CancellationToken cancellationToken,
+        params (
+            HubConnection Hub,
+            ConcurrentQueue<string> Events,
+            bool Receives
+        )[] recipients)
+    {
+        foreach (var recipient in recipients)
+        {
+            recipient.Events.Clear();
+        }
+
+        await publisher.IncidentsChangedAsync();
+        await publisher.WorkOrdersChangedAsync();
+
+        // The test-only probe confirms that each connection
+        // processed all earlier messages before assertions.
+        await SynchronizeAsync(
+            factory,
+            cancellationToken,
+            recipients.Select(item => item.Hub).ToArray());
+
+        var expected = new[]
+        {
+            OperationsEventPublisher.IncidentsChangedEvent,
+            OperationsEventPublisher.WorkOrdersChangedEvent
+        };
+
+        foreach (var recipient in recipients)
+        {
+            if (recipient.Receives)
+            {
+                Assert.Equal(
+                    expected,
+                    recipient.Events.ToArray());
+            }
+            else
+            {
+                Assert.Empty(recipient.Events);
+            }
+        }
+    }
+
+
     private static async Task<HubConnection> CreateConnectionAsync(
         SqlServerApiFactory factory,
         HttpClient client,
         string email,
-        string password)
+        string password,
+        bool useWebSockets = false)
     {
         await SqlServerApiFactory.RefreshCsrfAsync(client);
 
@@ -194,13 +710,40 @@ public sealed class SignalRIntegrationTests
                 $"https://localhost{OperationsHub.Route}",
                 options =>
                 {
-                    options.Transports =
-                        HttpTransportType.LongPolling;
-
                     options.Headers["Cookie"] = cookieHeader;
 
                     options.HttpMessageHandlerFactory =
                         _ => factory.Server.CreateHandler();
+
+                    if (useWebSockets)
+                    {
+                        options.Transports =
+                            HttpTransportType.WebSockets;
+
+                        options.SkipNegotiation = true;
+
+                        options.WebSocketFactory =
+                            async (context, cancellationToken) =>
+                            {
+                                var webSocketClient =
+                                    factory.Server.CreateWebSocketClient();
+
+                                webSocketClient.ConfigureRequest =
+                                    request =>
+                                    {
+                                        request.Headers["Cookie"] =
+                                            cookieHeader;
+                                    };
+
+                                return await webSocketClient.ConnectAsync(
+                                    context.Uri, cancellationToken);
+                            };
+                    }
+                    else
+                    {
+                        options.Transports =
+                            HttpTransportType.LongPolling;
+                    }
                 })
             .Build();
     }

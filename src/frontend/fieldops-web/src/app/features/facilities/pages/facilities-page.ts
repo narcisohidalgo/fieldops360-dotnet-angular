@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -45,7 +45,20 @@ export class FacilitiesPage implements OnInit {
     this.loadFacilities();
   }
 
+  private readonly createForm = viewChild(FacilityCreateForm);
+  private readonly editForm = viewChild(FacilityEditForm);
+
+  protected readonly isFormSaving = computed(() =>
+    this.createForm()?.saving() === true ||
+    this.editForm()?.saving() === true
+  );
+
   protected toggleCreateForm(): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
+
     if (!this.canManage()) {
       return;
     }
@@ -81,6 +94,11 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected editFacility(facility: Facility): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
+
     if (!this.canManage()) {
       return;
     }
@@ -99,6 +117,11 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected cancelEdit(): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
+
     this.selectedFacility.set(null);
   }
 
@@ -120,6 +143,11 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected requestDeactivation(facility: Facility): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
+
     if (!this.canManage()) {
       return;
     }
@@ -203,6 +231,11 @@ export class FacilitiesPage implements OnInit {
   }
 
   protected requestActivation(facility: Facility): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
+
     if (!this.canManage()) {
       return;
     }

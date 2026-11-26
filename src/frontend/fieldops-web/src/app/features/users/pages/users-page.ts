@@ -1,10 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
+  computed,
   DestroyRef,
   inject,
   OnInit,
-  signal
+  signal,
+  viewChild
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -36,12 +38,22 @@ export class UsersPage implements OnInit {
   private readonly service = inject(UserManagementService);
   private readonly destroyRef = inject(DestroyRef);
 
+  private readonly createForm = viewChild(UserCreateForm);
+  private readonly editForm = viewChild(UserEditForm);
+  private readonly passwordForm = viewChild(UserResetPasswordForm);
+
+  protected readonly isFormSaving = computed(() =>
+    this.createForm()?.saving() === true ||
+    this.editForm()?.saving() === true ||
+    this.passwordForm()?.saving() === true
+  );
+
   ngOnInit(): void {
     this.loadUsers();
   }
 
   protected toggleCreateForm(): void {
-    if (this.isLoading() || this.isSaving() || this.statusTarget() || this.selectedEditUser() || this.selectedPasswordUser()) {
+    if (this.isLoading() || this.isSaving() || this.isFormSaving() || this.statusTarget() || this.selectedEditUser() || this.selectedPasswordUser()) {
       return;
     }
 
@@ -50,6 +62,10 @@ export class UsersPage implements OnInit {
   }
 
   protected cancelCreateForm(): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
     this.showCreateForm.set(false);
   }
 
@@ -79,7 +95,7 @@ export class UsersPage implements OnInit {
   }
 
   protected cancelEditUser(): void {
-    if (this.isSaving()) {
+    if (this.isSaving() || this.isFormSaving()) {
       return;
     }
 
@@ -114,6 +130,10 @@ export class UsersPage implements OnInit {
   }
 
   protected cancelPasswordReset(): void {
+    if (this.isFormSaving()) {
+      return;
+    }
+
     this.selectedPasswordUser.set(null);
   }
 
