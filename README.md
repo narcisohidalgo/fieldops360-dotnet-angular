@@ -2,9 +2,115 @@
 
 **Enterprise Operations & Maintenance Management Platform**
 
+[![FieldOps 360 CI](https://github.com/narcisohidalgo/fieldops360-dotnet-angular/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/narcisohidalgo/fieldops360-dotnet-angular/actions/workflows/ci.yml)
+
+.NET 10 | Angular 22 | C# | TypeScript | SQL Server | Docker | SignalR
+
 FieldOps 360 is a full-stack portfolio project for managing facilities, their equipment, operational incidents, technicians and work orders. The backend uses ASP.NET Core 10 and Entity Framework Core with SQL Server; the frontend uses Angular 22.
 
-> **Project status:** Phases 1-14 implemented and validated within the local deployment and continuous delivery scope. Phase 14 adds a containerized HTTPS deployment, restricted SQL Server credentials, persistent storage, Docker-based integration testing and a GitHub Actions CI/CD pipeline. Local Docker deployment and consolidated validation of **794 automated test scenarios** have been completed successfully. The expanded CI/CD workflow has passed all five GitHub Actions jobs. Three public GHCR images have been published and verified, and a fresh isolated installation from those images has been successfully started. Public production hosting is outside the current deployment scope.
+> **Project status:** The application has been implemented and validated through Phase 14, including local Docker deployment and continuous delivery to GHCR. Phase 15 adds architecture documentation, reproducible fictional demonstration data, a screenshot gallery and a technical demonstration guide. Portfolio documentation and demonstration materials have been prepared and reviewed locally. Public production hosting is outside the current scope.
+
+## Project highlights
+
+FieldOps 360 demonstrates an end-to-end implementation
+of an operations and maintenance management system,
+from domain modeling and REST API development to
+frontend integration, security, automated testing
+and container delivery.
+
+| Engineering capability | Implementation |
+| --- | --- |
+| Backend development | ASP.NET Core 10, C#, REST API and Clean Architecture |
+| Frontend development | Angular 22, TypeScript, signals and reactive forms |
+| Business workflows | Incident lifecycle, work order planning and technician assignment |
+| Database engineering | SQL Server, EF Core migrations, relational constraints and optimistic concurrency |
+| Application security | ASP.NET Core Identity, role policies, cookies, CSRF protection and technician data isolation |
+| Real-time communication | SignalR change notifications and automatic data refresh |
+| Geographic visualization | Leaflet, OpenStreetMap and persisted facility coordinates |
+| Software quality | Unit, integration, browser and production-build regression testing |
+| DevOps | Docker Compose, Nginx, GitHub Actions and GHCR |
+
+### Validation at a glance
+
+| Metric | Result |
+| --- | ---: |
+| Consolidated automated test scenarios | **794 passed** |
+| Backend unit tests | 263 |
+| Backend integration tests | 35 |
+| Angular/Vitest tests | 489 |
+| Playwright browser scenarios | 7 |
+| Angular line coverage | 90.63% |
+| GitHub Actions validation and delivery jobs | 5/5 passed |
+| Public application container images | 3 |
+| Reproducible fictional business records | 84 |
+| Supported user roles | 3 |
+
+Test and coverage figures refer to the consolidated
+Phase 14 validation completed on 25 November 2026.
+
+See the [testing section](#tests) and
+[Docker and CI/CD documentation](docs/phase14-docker-cicd.md)
+for measurement details and verification scope.
+
+## Application preview
+
+![FieldOps 360 operational dashboard](docs/screenshots/portfolio/01-dashboard.png)
+
+*Operational dashboard displaying facilities, assets,
+technicians, incidents, work orders, overdue indicators
+and status distributions.*
+
+The screenshots show the actual Angular application
+running in the local Docker environment through HTTPS,
+with fictional demonstration data.
+
+### Screenshot gallery
+
+| Module | Preview |
+| --- | --- |
+| Operational dashboard | [Dashboard](docs/screenshots/portfolio/01-dashboard.png) |
+| Facilities | [Facility management](docs/screenshots/portfolio/02-facilities.png) |
+| Geographic visualization | [Interactive Leaflet map](docs/screenshots/portfolio/03-facilities-map.png) |
+| Assets | [Asset management](docs/screenshots/portfolio/04-assets.png) |
+| Incidents | [Incident management](docs/screenshots/portfolio/05-incidents.png) |
+| Technicians | [Technician management](docs/screenshots/portfolio/06-technicians.png) |
+| Work orders | [Work order management](docs/screenshots/portfolio/07-work-orders.png) |
+| Angular forms | [Work order edit form](docs/screenshots/portfolio/08-work-order-detail.png) |
+| Identity administration | [Users and permissions](docs/screenshots/portfolio/09-users.png) |
+| Supervisor role | [Read-only facility access](docs/screenshots/portfolio/10-supervisor.png) |
+| Technician role | [Assigned work orders](docs/screenshots/portfolio/11-my-work-orders.png) |
+| Route protection | [Access denied](docs/screenshots/portfolio/12-access-denied.png) |
+| Real-time operations | [SignalR notifications](docs/screenshots/portfolio/13-realtime.png) |
+| Authentication | [Login](docs/screenshots/portfolio/14-login.png) |
+
+The optional demo scripts create 84 business records:
+8 facilities, 24 assets, 8 technicians, 20 incidents
+and 24 work orders.
+
+The captured environment also contains one facility
+and one incident retained from earlier Docker validation.
+Consequently, the screenshots display 86 operational
+records in total.
+
+The application interface is in Spanish. Technical
+documentation and source-code identifiers are primarily
+in English.
+
+## Explore the project
+
+| Resource | Description |
+| --- | --- |
+| [System architecture](docs/architecture.md) | Deployment, Clean Architecture, authentication, SignalR and relational data model |
+| [Demonstration guide](docs/demo-guide.md) | Approximately eight-minute functional and technical walkthrough |
+| [Docker quick start](#run-with-docker-recommended-for-local-demonstration) | Install and run the complete application locally |
+| [Demo data scripts](scripts/demo/README.md) | Populate the application with fictional operational records and optional demo users |
+| [Database documentation](docs/database/README.md) | Schema management and migration history |
+| [Security design](docs/security/phase10-security-design.md) | Identity, authorization and request protection |
+| [Testing and quality](docs/phase13-testing-quality.md) | Integration tests, E2E scenarios and coverage methodology |
+| [Docker and continuous delivery](docs/phase14-docker-cicd.md) | HTTPS deployment, container operations and GHCR publication |
+| [GitHub Actions](https://github.com/narcisohidalgo/fieldops360-dotnet-angular/actions) | Automated build, test and publication history |
+| [Local development](#local-development) | Run the backend and Angular outside Docker |
+| [Security and deployment scope](#security-and-deployment-scope) | Implemented safeguards and remaining production hardening |
 
 ## Technology stack
 
@@ -79,6 +185,7 @@ for implementation details, verification and limitations.
 
 See [Phase 12 technical documentation](docs/phase12-realtime.md)
 for architecture, security, verification and limitations.
+
 ### Facilities
 
 - List facilities and retrieve an individual facility.
@@ -167,8 +274,13 @@ docs/
   phase12-realtime.md          # SignalR, notifications and live dashboard
   phase13-testing-quality.md   # Integration, E2E, coverage and quality
   phase14-docker-cicd.md       # Containers, HTTPS, operations and delivery
+  architecture.md             # System architecture and relational data model
+  demo-guide.md               # Functional and technical demonstration
+  screenshots/
+    portfolio/                # Fourteen application screenshots
 scripts/
   docker/                     # Initialization, SQL provisioning and startup
+  demo/                       # Optional REST-based demonstration data
 .github/
   workflows/ci.yml             # CI/CD workflow
 compose.yaml                   # Local Docker environment
@@ -286,6 +398,15 @@ GitHub Actions run **#4**, source revision
 
 **Total workflow duration: 4m 11s.**
 
+The subsequent documentation-only commit
+`b12c6c552c57d4b213f6fe75163076dac0a10758`
+also passed all five jobs in GitHub Actions run **#5**,
+with a total duration of **4m 48s**.
+
+The isolated installation evidence documented below
+continues to refer to the application revision
+`13cb8c258bd09847a4e981c5d4357d4a1c045f2c`.
+
 All five jobs succeeded, and all three container images were
 published. Anonymous access to their registry manifests was
 verified, together with the downloaded image revision labels,
@@ -362,7 +483,25 @@ The public certificate is stored at
 Never distribute or commit the private key
 `.fieldops-local/tls/localhost.key`.
 
-### 4. Stop the environment
+### 4. Optional demonstration data
+
+After starting the application and configuring local
+certificate trust, the optional demonstration scripts
+can populate the Docker database through the REST API.
+
+The scripts request credentials interactively and do not
+contain default passwords.
+
+Follow the [demo initialization instructions](scripts/demo/README.md)
+in the documented sequence.
+
+Then explore the application using the
+[functional demonstration guide](docs/demo-guide.md).
+
+Demo initialization is optional and is not part of
+normal application startup.
+
+### 5. Stop the environment
 
 ```powershell
 docker compose stop
@@ -376,8 +515,21 @@ want to delete the local environment and its persistent data.
 
 ### Installation from published images
 
-Once the GHCR packages are published and accessible, check out
-the corresponding source revision and run:
+Public GHCR packages are available for validated revisions.
+
+Clone the repository if necessary, check out the source
+revision corresponding to the desired published image tag,
+and run the installer from that checkout.
+
+For example, from a clean clone, the previously verified
+application revision can be selected with:
+
+```powershell
+git checkout --detach 13cb8c258bd09847a4e981c5d4357d4a1c045f2c
+```
+
+The following installer parameter must contain the full
+commit SHA corresponding to the checked-out revision:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File ./scripts/docker/Start-LocalEnvironment.ps1 -PublishedCommit "<FULL_COMMIT_SHA>"
@@ -686,8 +838,10 @@ interpretation and remaining limitations.
   delivery scope, including 794 validated local test scenarios.
 - GitHub Actions CI/CD, public GHCR publication and isolated
   installation from published images verified.
-- Phase 15: final portfolio documentation, demonstration materials
-  and presentation.
+- Phase 15: architecture diagrams, relational data model,
+  demonstration dataset, role-specific demo accounts,
+  fourteen application screenshots and functional walkthrough
+  prepared and locally reviewed.
 - Future production work: public hosting, trusted certificates,
   secure secret management, monitoring, backup and recovery,
   dependency and image security reviews.
